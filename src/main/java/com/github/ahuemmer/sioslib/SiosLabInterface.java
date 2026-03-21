@@ -1,6 +1,8 @@
 package com.github.ahuemmer.sioslib;
 
 import com.fazecast.jSerialComm.SerialPort;
+import com.fazecast.jSerialComm.SerialPortDataListener;
+import com.fazecast.jSerialComm.SerialPortEvent;
 
 import java.nio.ByteBuffer;
 import java.util.Enumeration;
@@ -11,7 +13,16 @@ public class SiosLabInterface implements AutoCloseable {
 
     private SerialPort siosLabPort;
 
-    public byte[] CONTROL_SET_OUTPUT=new byte[]{16};
+    public final static byte[] TEST_DATA_SEQUENCE = new byte[]{0,0,0,1};
+    public final static byte[] CONTROL_SET_OUTPUT=new byte[]{16};
+    public final static byte[] CONTROL_SET_INPUT=new byte[]{32};
+
+    public final static int POLLING_INTERVAL = 50; //ms
+
+    public final static int BAUD_RATE = 19200;
+    public final static int NUM_DATABITS = 8;
+
+    private DataListener dataListener;
 
     public SiosLabInterface() throws NoSerialPortFoundException {
 
@@ -24,8 +35,8 @@ public class SiosLabInterface implements AutoCloseable {
         for (SerialPort port : ports) {
             System.out.println(port.getSystemPortName() + " - " + port.getDescriptivePortName());
             SerialPort portToTry = SerialPort.getCommPort(port.getSystemPortName());
-            portToTry.setBaudRate(19200);
-            portToTry.setNumDataBits(8);
+            portToTry.setBaudRate(BAUD_RATE);
+            portToTry.setNumDataBits(NUM_DATABITS);
             portToTry.setNumStopBits(SerialPort.ONE_STOP_BIT);
             portToTry.setParity(SerialPort.NO_PARITY);
 
@@ -42,16 +53,39 @@ public class SiosLabInterface implements AutoCloseable {
         if (siosLabPort == null) {
             throw new NoSiosLabFoundException();
         }
+
+        siosLabPort.addDataListener(new SerialPortDataListener() {
+            @Override
+            public int getListeningEvents() { return SerialPort.LISTENING_EVENT_DATA_AVAILABLE; }
+            @Override
+            public void serialEvent(SerialPortEvent event)
+            {
+                if (((event.getEventType() & SerialPort.LISTENING_EVENT_DATA_AVAILABLE) > 0) && (dataListener != null))
+                {
+                    byte[] newData = new byte[siosLabPort.bytesAvailable()];
+                    siosLabPort.readBytes(newData, newData.length);
+                    dataListener.dataReceived(newData);
+                    try {
+                        Thread.sleep(POLLING_INTERVAL);
+                    }
+                    catch (InterruptedException e) {}
+                    siosLabPort.writeBytes(CONTROL_SET_INPUT, CONTROL_SET_INPUT.length);
+                }
+            }
+        });
+
+        siosLabPort.writeBytes(CONTROL_SET_INPUT, CONTROL_SET_INPUT.length);
+    }
+
+    public void attachDataListener(DataListener dataListener) {
+        this.dataListener = dataListener;
     }
 
     private boolean testSiosLab(SerialPort port) {
-        for (int i=0; i<3; i++) {
-            byte[] data = {0};
-            port.writeBytes(data, data.length);
-        }
 
-        byte[] data = {1};
-        port.writeBytes(data, data.length);
+        for(byte b: TEST_DATA_SEQUENCE) {
+            port.writeBytes(new byte[]{b}, 1);
+        }
 
         byte[] buffer = new byte[1];
 
@@ -114,7 +148,7 @@ public class SiosLabInterface implements AutoCloseable {
         System.out.println("Closing SiosLab port "+siosLabPort.getSystemPortName());
         sendData(0);
         try {
-            Thread.sleep(250);
+            Thread.sleep(POLLING_INTERVAL);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }

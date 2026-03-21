@@ -7,6 +7,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class SiosLabInterfaceTest {
 
     @Test
+    void mirrorData() throws Exception {
+        try(SiosLabInterface siosLabInterface = new SiosLabInterface()) {
+            assertTrue(siosLabInterface.isConnected());
+
+            siosLabInterface.attachDataListener(newData -> {
+                send(siosLabInterface, newData[0]);
+            });
+
+            long startTime = System.currentTimeMillis();
+
+            while (System.currentTimeMillis() - startTime < 60000) {
+                // now check that it's working...
+            }
+
+        }
+    }
+
+    @Test
     void sendPattern() throws Exception {
         try(SiosLabInterface siosLabInterface = new SiosLabInterface()) {
             assertTrue(siosLabInterface.isConnected());
@@ -40,8 +58,12 @@ public class SiosLabInterfaceTest {
         }
     }
 
-    private void sendAndWait(SiosLabInterface siosLabInterface, int data) {
+    private void send(SiosLabInterface siosLabInterface, int data) {
         siosLabInterface.sendData(data);
+    }
+
+    private void sendAndWait(SiosLabInterface siosLabInterface, int data) {
+        send(siosLabInterface, data);
         try {
             Thread.sleep(250);
         } catch (InterruptedException e) {}
