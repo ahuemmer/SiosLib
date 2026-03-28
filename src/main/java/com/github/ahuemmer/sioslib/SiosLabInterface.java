@@ -15,7 +15,12 @@ public class SiosLabInterface implements AutoCloseable {
 
     public final static byte[] TEST_DATA_SEQUENCE = new byte[]{0,0,0,1};
     public final static byte[] CONTROL_SET_OUTPUT=new byte[]{16};
-    public final static byte[] CONTROL_SET_INPUT=new byte[]{32};
+    public final static byte[] CONTROL_SET_INPUT_DIGITAL =new byte[]{32};
+    public final static byte[] CONTROL_SET_INPUT_ANALOG_1 =new byte[]{48};
+    public final static byte[] CONTROL_SET_INPUT_ANALOG_2 =new byte[]{49};
+
+    public final static boolean ANALOG_INPUT_1=true;
+    public final static boolean ANALOG_INPUT_2=false;
 
     public final static int POLLING_INTERVAL = 50; //ms
 
@@ -69,12 +74,14 @@ public class SiosLabInterface implements AutoCloseable {
                         Thread.sleep(POLLING_INTERVAL);
                     }
                     catch (InterruptedException e) {}
-                    siosLabPort.writeBytes(CONTROL_SET_INPUT, CONTROL_SET_INPUT.length);
+                    //siosLabPort.writeBytes(CONTROL_SET_INPUT_DIGITAL, CONTROL_SET_INPUT_DIGITAL.length);
+                    siosLabPort.writeBytes(CONTROL_SET_INPUT_ANALOG_1, CONTROL_SET_INPUT_ANALOG_1.length);
                 }
             }
         });
 
-        siosLabPort.writeBytes(CONTROL_SET_INPUT, CONTROL_SET_INPUT.length);
+        //siosLabPort.writeBytes(CONTROL_SET_INPUT_DIGITAL, CONTROL_SET_INPUT_DIGITAL.length);
+        siosLabPort.writeBytes(CONTROL_SET_INPUT_ANALOG_1, CONTROL_SET_INPUT_ANALOG_1.length);
     }
 
     public void attachDataListener(DataListener dataListener) {
@@ -141,6 +148,78 @@ public class SiosLabInterface implements AutoCloseable {
         System.out.println();
 
         siosLabPort.writeBytes(bytes, bytes.length);
+    }
+
+    public byte getDigitalValue() {
+        siosLabPort.writeBytes(CONTROL_SET_INPUT_DIGITAL, CONTROL_SET_INPUT_DIGITAL.length);
+        waitForData();
+        return receiveData();
+    }
+
+    public void waitForNextSlot() {
+        try {
+            Thread.sleep(1000/BAUD_RATE);
+        } catch (InterruptedException e) {
+
+        }
+    }
+
+    private byte receiveData() {
+        byte[] newData = new byte[1];
+        siosLabPort.readBytes(newData, newData.length);
+        System.out.print("Received: ");
+        for (int i=0; i<newData.length; i++) {
+            System.out.print(String.format("%8s", Integer.toBinaryString(newData[i] & 0xFF)).replace(' ', '0'));
+        }
+        System.out.println();
+        return newData[0];
+    }
+
+    private void waitForData() {
+        while (siosLabPort.bytesAvailable() <= 0) {
+            waitForNextSlot();
+        }
+    }
+
+    public int getAnalogValue(boolean analogInput) {
+        if (analogInput == ANALOG_INPUT_1) {
+            siosLabPort.writeBytes(CONTROL_SET_INPUT_ANALOG_1, CONTROL_SET_INPUT_ANALOG_1.length);
+        }
+        else {
+            siosLabPort.writeBytes(CONTROL_SET_INPUT_ANALOG_2, CONTROL_SET_INPUT_ANALOG_2.length);
+        }
+
+        waitForData();
+
+        byte newData = receiveData();
+
+        int valueIn = newData & 0xFF;
+        int valueOut = 0;
+        if (valueIn > 0) {
+            valueOut +=1;
+        }
+        if (valueIn > 32) {
+            valueOut +=2;
+        }
+        if (valueIn > 64) {
+            valueOut +=4;
+        }
+        if (valueIn > 96) {
+            valueOut +=8;
+        }
+        if (valueIn > 128) {
+            valueOut +=16;
+        }
+        if (valueIn > 160) {
+            valueOut +=32;
+        }
+        if (valueIn > 192) {
+            valueOut +=64;
+        }
+        if (valueIn > 224) {
+            valueOut += 128;
+        }
+        return valueOut;
     }
 
     @Override
