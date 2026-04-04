@@ -68,7 +68,7 @@ class SiosLibIntegrationTest {
             int maxValuePlusOne = TEST_MODE == SiosLib.SIOS_MODE ? 1024 : 256;
 
             while (System.currentTimeMillis() - startTime < 60000) {
-                int valueIn = siosLib.getAnalogValue(SiosLib.ANALOG_INPUT_1);
+                int valueIn = siosLib.getAnalogValue(PREFERRED_ANALOG_INPUT);
 
                 int valueOut = 0;
                 int factor = 1;
