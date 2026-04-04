@@ -18,21 +18,21 @@ public class SiosLib implements AutoCloseable {
 
     private static final Logger LOG = LogManager.getLogger(SiosLib.class);
 
-    protected static final byte[] TEST_DATA_SEQUENCE = new byte[]{0, 0, 0, 1};
-    protected static final byte[] SWITCH_MODE_SEQUENCE_PART_1 = new byte[]{100, 27, 3, -1}; // -1 means 255 as unsigned byte
-    protected static final byte[] SWITCH_MODE_SEQUENCE_PART_2 = new byte[]{102, 27};
-    protected static final byte CONTROL_SET_OUTPUT_SIOS_MODE = (byte) 16;
-    protected static final byte CONTROL_SET_OUTPUT_COMPULAB_MODE = (byte) 81;
-    protected static final byte CONTROL_SET_INPUT_DIGITAL_SIOS_MODE = (byte) 32;
-    protected static final byte CONTROL_SET_INPUT_DIGITAL_COMPULAB_MODE = (byte) -45;
-    protected static final byte CONTROL_SET_INPUT_ANALOG_1_SIOS_MODE = (byte) 56;
-    protected static final byte CONTROL_SET_INPUT_ANALOG_2_SIOS_MODE = (byte) 57;
-    protected static final byte CONTROL_SET_INPUT_ANALOG_1_COMPULAB_MODE = (byte) 60;
-    protected static final byte CONTROL_SET_INPUT_ANALOG_2_COMPULAB_MODE = (byte) 58;
-    protected static final byte CONTROL_SET_MODE_SIOS = (byte) 0;
-    protected static final byte CONTROL_SET_MODE_COMPULAB = (byte) 1;
-    protected static final int MODE_INDICATOR_SIOSLAB = 10;
-    protected static final int MODE_INDICATOR_COMPULAB = 201;
+    protected static final byte[] TEST_DATA_SEQUENCE = new byte[]{0x00, 0x00, 0x00, 0x01};
+    protected static final byte[] SWITCH_MODE_SEQUENCE_PART_1 = new byte[]{0x64, 0x1B, 0x03, -0x01}; // -1 means 255 as unsigned byte
+    protected static final byte[] SWITCH_MODE_SEQUENCE_PART_2 = new byte[]{0x66, 0x1B};
+    protected static final byte CONTROL_SET_OUTPUT_SIOS_MODE = 0x10;
+    protected static final byte CONTROL_SET_OUTPUT_COMPULAB_MODE = 0x51;
+    protected static final byte CONTROL_SET_INPUT_DIGITAL_SIOS_MODE = 0x20;
+    protected static final byte CONTROL_SET_INPUT_DIGITAL_COMPULAB_MODE = -0x2D;
+    protected static final byte CONTROL_SET_INPUT_ANALOG_1_SIOS_MODE = 0x38;
+    protected static final byte CONTROL_SET_INPUT_ANALOG_2_SIOS_MODE = 0x39;
+    protected static final byte CONTROL_SET_INPUT_ANALOG_1_COMPULAB_MODE = 0x3C;
+    protected static final byte CONTROL_SET_INPUT_ANALOG_2_COMPULAB_MODE = 0x3A;
+    protected static final byte CONTROL_SET_MODE_SIOS = 0x00;
+    protected static final byte CONTROL_SET_MODE_COMPULAB = 0x01;
+    protected static final byte MODE_INDICATOR_SIOSLAB = 0x0A;
+    protected static final byte MODE_INDICATOR_COMPULAB = -0x37;
 
     public static final boolean ANALOG_INPUT_1 = true;
     public static final boolean ANALOG_INPUT_2 = false;
@@ -41,6 +41,7 @@ public class SiosLib implements AutoCloseable {
     public static final boolean COMPULAB_MODE = true;
 
     public static final int POLLING_INTERVAL = 50; // ms
+    public static final int RECEIVE_TIMEOUT = 250; // ms
 
     public static final int BAUD_RATE = 19200;
     public static final int NUM_DATABITS = 8;
@@ -121,9 +122,11 @@ public class SiosLib implements AutoCloseable {
 
         boolean readSomething = false;
 
-        while (!readSomething) {
+        long timeBefore = System.currentTimeMillis();
 
-            if (port.bytesAvailable() > 0 && port.bytesAvailable() == 1) {
+        while (!readSomething && (System.currentTimeMillis() - timeBefore < RECEIVE_TIMEOUT)) {
+
+            if (port.bytesAvailable() == 1) {
                 int numBytesRead = port.readBytes(buffer, buffer.length);
 
                 if (numBytesRead == 1) {
@@ -134,7 +137,7 @@ public class SiosLib implements AutoCloseable {
                     if (buffer[0] == MODE_INDICATOR_SIOSLAB) {
                         LOG.info("Found SiosLab running in SIOS mode on port {}.", port.getSystemPortName());
                         return SIOS_MODE;
-                    } else if (Byte.toUnsignedInt(buffer[0]) == MODE_INDICATOR_COMPULAB) {
+                    } else if (buffer[0] == MODE_INDICATOR_COMPULAB) {
                         LOG.info(
                                 "Found SiosLab running in CompuLAB mode on port {}.", port.getSystemPortName());
                         return COMPULAB_MODE;
@@ -174,7 +177,7 @@ public class SiosLib implements AutoCloseable {
 
         try {
             sendData(data);
-            byte[] result = responseFuture.completeOnTimeout(new byte[]{0}, 250, TimeUnit.MILLISECONDS).get();
+            byte[] result = responseFuture.completeOnTimeout(new byte[]{0}, RECEIVE_TIMEOUT, TimeUnit.MILLISECONDS).get();
             LOG.trace("Received: {}", () -> formatByteToString(result));
             return result;
         } finally {
