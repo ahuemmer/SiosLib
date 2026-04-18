@@ -45,7 +45,7 @@ class SiosLibIntegrationTest {
 
             while (System.currentTimeMillis() - startTime < 60000) {
                 int newData = siosLib.getDigitalValue();
-                siosLib.setOutputValue(newData);
+                siosLib.setDigitalOutputValue(newData);
                 siosLib.waitForNextSlot();
             }
         }
@@ -79,7 +79,7 @@ class SiosLibIntegrationTest {
                     factor *= 2;
                 }
 
-                siosLib.setOutputValue(valueOut);
+                siosLib.setDigitalOutputValue(valueOut);
                 await().pollDelay(250, TimeUnit.MILLISECONDS).untilAsserted(() -> assertTrue(true));
             }
         }
@@ -109,8 +109,8 @@ class SiosLibIntegrationTest {
     }
 
     /**
-     * Sends a pattern to the digital output that makes second LED (0,2,4,6) light and then switch over to the other
-     * ones (1,3,5,7). This is repeated
+     * Sends a pattern to the digital output that makes every second LED (0,2,4,6) light and then switch over to the
+     * other ones (1,3,5,7). This is repeated eight times.
      *
      * @throws Exception if the SIOSLab cannot be found or any other error occurs.
      */
@@ -125,8 +125,43 @@ class SiosLibIntegrationTest {
         }
     }
 
-    private void sendAndWait(SiosLib siosLib, int data) throws ExecutionException, InterruptedException {
-        siosLib.setOutputValue(data);
+    /**
+     * Sends a pattern to the digital output that makes the outer LEDs start lighting and then continues to the center
+     * LEDs. This is repeated eight times.
+     *
+     * @throws Exception if the SIOSLab cannot be found or any other error occurs.
+     */
+    @Test
+    void sendNarrowingPattern() throws ExecutionException, InterruptedException {
+        try (SiosLib siosLib = new SiosLib(TEST_MODE)) {
+            for (int i = 0; i < 8; i++) {
+                assertTrue(siosLib.isConnected());
+                siosLib.setDigitalOutputState(new boolean[]{true, false, false, false, false, false, false, true});
+                pause();
+                siosLib.setDigitalOutputState(new boolean[]{true, true, false, false, false, false, true, true});
+                pause();
+                siosLib.setDigitalOutputState(new boolean[]{true, true, true, false, false, true, true, true});
+                pause();
+                siosLib.setDigitalOutputState(new boolean[]{true, true, true, true, true, true, true, true});
+                pause();
+                siosLib.setDigitalOutputState(new boolean[]{true, true, true, false, false, true, true, true});
+                pause();
+                siosLib.setDigitalOutputState(new boolean[]{true, true, false, false, false, false, true, true});
+                pause();
+                siosLib.setDigitalOutputState(new boolean[]{true, false, false, false, false, false, false, true});
+                pause();
+                siosLib.setDigitalOutputState(new boolean[]{false, false, false, false, false, false, false, false});
+                pause();
+            }
+        }
+    }
+
+    private void pause() {
         await().pollDelay(250, TimeUnit.MILLISECONDS).untilAsserted(() -> assertTrue(true));
+    }
+
+    private void sendAndWait(SiosLib siosLib, int data) throws ExecutionException, InterruptedException {
+        siosLib.setDigitalOutputValue(data);
+        pause();
     }
 }
