@@ -8,6 +8,9 @@ import org.apache.logging.log4j.Logger;
 import org.jspecify.annotations.Nullable;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -49,6 +52,8 @@ public class SiosLib implements AutoCloseable {
     public static final int NUM_DATABITS = 8;
 
     private boolean siosLabMode = SIOS_MODE;
+
+    private int digitalOutputValue;
 
     public SiosLib(boolean mode) throws NoSerialPortFoundException {
 
@@ -111,6 +116,8 @@ public class SiosLib implements AutoCloseable {
         sendData(newMode == SIOS_MODE ? CONTROL_SET_MODE_SIOS : CONTROL_SET_MODE_COMPULAB);
 
         siosLabMode = newMode;
+
+        setDigitalOutputValue(0);
 
         LOG.trace("Finished setting mode.");
     }
@@ -208,6 +215,58 @@ public class SiosLib implements AutoCloseable {
         sendData(siosLabMode == SIOS_MODE ? CONTROL_SET_OUTPUT_SIOS_MODE : CONTROL_SET_OUTPUT_COMPULAB_MODE);
         sendData(byteToSend);
         LOG.trace("Finished setting output value.");
+        this.digitalOutputValue = value;
+    }
+
+    public int getDigitalOutputValue() {
+        return this.digitalOutputValue;
+    }
+
+    public void setDigitalOutputState(DigitalOutputState... state) {
+        if (state.length > 8) {
+            throw new IllegalArgumentException("Digital output state must have at most eight parameters");
+        }
+
+        Set<DigitalOutputState> states = new HashSet<>(Arrays.asList(state));
+        if ((states.contains(DigitalOutputState.OUTPUT_0_OFF) && states.contains(DigitalOutputState.OUTPUT_0_ON)) ||
+                (states.contains(DigitalOutputState.OUTPUT_1_OFF) && states.contains(DigitalOutputState.OUTPUT_1_ON)) ||
+                (states.contains(DigitalOutputState.OUTPUT_2_OFF) && states.contains(DigitalOutputState.OUTPUT_2_ON)) ||
+                (states.contains(DigitalOutputState.OUTPUT_3_OFF) && states.contains(DigitalOutputState.OUTPUT_3_ON)) ||
+                (states.contains(DigitalOutputState.OUTPUT_4_OFF) && states.contains(DigitalOutputState.OUTPUT_4_ON)) ||
+                (states.contains(DigitalOutputState.OUTPUT_5_OFF) && states.contains(DigitalOutputState.OUTPUT_5_ON)) ||
+                (states.contains(DigitalOutputState.OUTPUT_6_OFF) && states.contains(DigitalOutputState.OUTPUT_6_ON)) ||
+                (states.contains(DigitalOutputState.OUTPUT_7_OFF) && states.contains(DigitalOutputState.OUTPUT_7_ON))) {
+            throw new IllegalArgumentException("Contradictory output states (ON and OFF for the same channel) given");
+        }
+
+        boolean newOutputState[] = intToBooleanArray(this.digitalOutputValue);
+        Boolean desiredOutputState[] = new Boolean[8];
+
+        int i = 0;
+        boolean onOrOff = true;
+
+        for (DigitalOutputState digitalOutputState : DigitalOutputState.values()) {
+            if (states.contains(digitalOutputState)) {
+                desiredOutputState[i / 2] = onOrOff;
+            }
+            onOrOff = !onOrOff;
+            i += 1;
+        }
+
+        for (i = 0; i < 8; i++) {
+            if (desiredOutputState[i] != null) {
+                newOutputState[i] = desiredOutputState[i];
+            }
+        }
+        setDigitalOutputState(newOutputState);
+    }
+
+    public static boolean[] intToBooleanArray(int value) {
+        boolean[] result = new boolean[8];
+        for (int i = 0; i < 8; ++i) {
+            result[i] = (value & (1 << i)) != 0;
+        }
+        return result;
     }
 
     public void waitForNextSlot() {
@@ -301,5 +360,24 @@ public class SiosLib implements AutoCloseable {
             Thread.currentThread().interrupt();
         }
         siosLabPort.closePort();
+    }
+
+    public enum DigitalOutputState {
+        OUTPUT_0_ON,
+        OUTPUT_0_OFF,
+        OUTPUT_1_ON,
+        OUTPUT_1_OFF,
+        OUTPUT_2_ON,
+        OUTPUT_2_OFF,
+        OUTPUT_3_ON,
+        OUTPUT_3_OFF,
+        OUTPUT_4_ON,
+        OUTPUT_4_OFF,
+        OUTPUT_5_ON,
+        OUTPUT_5_OFF,
+        OUTPUT_6_ON,
+        OUTPUT_6_OFF,
+        OUTPUT_7_ON,
+        OUTPUT_7_OFF,
     }
 }

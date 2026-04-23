@@ -205,7 +205,7 @@ public class SiosLibTest {
             serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
 
             long start = System.nanoTime();
-            new SiosLib(mode);
+            SiosLib siosLib = new SiosLib(mode);
             long elapsedMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
             assertTrue(elapsedMs >= 50L);
 
@@ -214,8 +214,9 @@ public class SiosLibTest {
             verify(serialPort, times(1)).setNumStopBits(SerialPort.ONE_STOP_BIT);
             verify(serialPort, times(1)).setParity(SerialPort.NO_PARITY);
             verify(serialPort, times(1)).openPort();
-            verify(serialPort, times(mode == SiosLib.COMPULAB_MODE ? 3 : 5)).writeBytes(new byte[]{0x00}, 1);
+            verify(serialPort, times(mode == SiosLib.COMPULAB_MODE ? 4 : 6)).writeBytes(new byte[]{0x00}, 1);
             verify(serialPort, times(mode == SiosLib.COMPULAB_MODE ? 3 : 1)).writeBytes(new byte[]{0x01}, 1);
+            assertEquals(0, siosLib.getDigitalOutputValue());
         }
     }
 
@@ -350,19 +351,22 @@ public class SiosLibTest {
 
                 SiosLib siosLib = new SiosLib(mode);
 
+                clearInvocations(serialPort);
+
                 siosLib.setDigitalOutputValue(5);
 
                 byte[] controlData = new byte[]{mode == SIOS_MODE ? CONTROL_SET_OUTPUT_SIOS_MODE : CONTROL_SET_OUTPUT_COMPULAB_MODE};
 
                 verify(serialPort, times(1)).writeBytes(controlData, controlData.length);
                 verify(serialPort, times(1)).writeBytes(new byte[]{5}, 1);
+                assertEquals(5, siosLib.getDigitalOutputValue());
             }
         }
     }
 
     @Nested
-    @DisplayName("setDigitalOutputState")
-    class SetDigitalOutputState {
+    @DisplayName("setDigitalOutputState with boolean array")
+    class SetDigitalOutputStateWithBooleanArray {
 
         @ParameterizedTest
         @DisplayName("sets output state")
@@ -377,12 +381,15 @@ public class SiosLibTest {
 
                 SiosLib siosLib = new SiosLib(mode);
 
+                clearInvocations(serialPort);
+
                 siosLib.setDigitalOutputState(new boolean[]{true, false, true, false, true, false, true, false});
 
                 byte[] controlData = new byte[]{mode == SIOS_MODE ? CONTROL_SET_OUTPUT_SIOS_MODE : CONTROL_SET_OUTPUT_COMPULAB_MODE};
 
                 verify(serialPort, times(1)).writeBytes(controlData, controlData.length);
                 verify(serialPort, times(1)).writeBytes(new byte[]{85}, 1);
+                assertEquals(85, siosLib.getDigitalOutputValue());
             }
         }
 
@@ -399,7 +406,9 @@ public class SiosLibTest {
 
                 SiosLib siosLib = new SiosLib(SIOS_MODE);
 
-                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(null));
+                clearInvocations(serialPort);
+
+                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState((boolean[]) null));
 
                 byte[] controlData = new byte[]{mode == SIOS_MODE ? CONTROL_SET_OUTPUT_SIOS_MODE : CONTROL_SET_OUTPUT_COMPULAB_MODE};
 
@@ -420,6 +429,8 @@ public class SiosLibTest {
 
                 SiosLib siosLib = new SiosLib(SIOS_MODE);
 
+                clearInvocations(serialPort);
+
                 assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(new boolean[]{true}));
                 assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(new boolean[]{true, true, true, true, true, true, true, true, true}));
 
@@ -429,6 +440,80 @@ public class SiosLibTest {
             }
         }
 
+
+    }
+
+    @Nested
+    @DisplayName("setDigitalOutputState with state flags")
+    class SetDigitalOutputStateStateFlags {
+
+        @Test
+        @DisplayName("throws IllegalArgumentException on contradictory state flags")
+        void throws_IllegalArgumentException_on_contradictory_state_flags() {
+            try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
+                prepareSerialPortMock();
+
+                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+
+                SiosLib siosLib = new SiosLib(SIOS_MODE);
+
+                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_0_OFF));
+                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_1_ON, SiosLib.DigitalOutputState.OUTPUT_1_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF));
+                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_1_ON, SiosLib.DigitalOutputState.OUTPUT_2_ON, SiosLib.DigitalOutputState.OUTPUT_2_OFF));
+                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_7_ON, SiosLib.DigitalOutputState.OUTPUT_3_ON, SiosLib.DigitalOutputState.OUTPUT_3_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF));
+                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_4_ON, SiosLib.DigitalOutputState.OUTPUT_2_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF));
+                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_1_ON, SiosLib.DigitalOutputState.OUTPUT_5_ON, SiosLib.DigitalOutputState.OUTPUT_5_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF));
+                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_4_OFF, SiosLib.DigitalOutputState.OUTPUT_6_ON, SiosLib.DigitalOutputState.OUTPUT_7_ON, SiosLib.DigitalOutputState.OUTPUT_6_OFF));
+                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_1_ON, SiosLib.DigitalOutputState.OUTPUT_7_ON, SiosLib.DigitalOutputState.OUTPUT_5_OFF, SiosLib.DigitalOutputState.OUTPUT_7_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF));
+            }
+        }
+
+        @Test
+        @DisplayName("throws IllegalArgumentException on more than eight state flags")
+        void throws_IllegalArgumentException_on_more_than_eight_state_flags() {
+            try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
+                prepareSerialPortMock();
+
+                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+
+                SiosLib siosLib = new SiosLib(SIOS_MODE);
+
+                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_0_OFF, SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_0_OFF, SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_0_OFF, SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_0_OFF, SiosLib.DigitalOutputState.OUTPUT_2_OFF));
+            }
+        }
+
+        @Test
+        @DisplayName("correctly sets the new output state based on the previous one")
+        void correctly_sets_the_new_output_state_based_on_the_previous_one() {
+            try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
+                prepareSerialPortMock();
+
+                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+
+                SiosLib siosLib = new SiosLib(SIOS_MODE);
+
+                siosLib.setDigitalOutputValue(33); // 00100001
+
+                siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_0_OFF); // 00100000
+
+                assertEquals(32, siosLib.getDigitalOutputValue());
+
+                siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_5_OFF, SiosLib.DigitalOutputState.OUTPUT_2_ON); // 00000100
+
+                assertEquals(4, siosLib.getDigitalOutputValue());
+
+                siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_7_ON, SiosLib.DigitalOutputState.OUTPUT_6_ON, SiosLib.DigitalOutputState.OUTPUT_4_OFF, SiosLib.DigitalOutputState.OUTPUT_3_ON, SiosLib.DigitalOutputState.OUTPUT_2_OFF, SiosLib.DigitalOutputState.OUTPUT_0_ON); // 11001001
+
+                assertEquals(201, siosLib.getDigitalOutputValue());
+
+                siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_3_ON, SiosLib.DigitalOutputState.OUTPUT_1_ON);
+
+                assertEquals(203, siosLib.getDigitalOutputValue());
+            }
+        }
 
     }
 
