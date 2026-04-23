@@ -228,8 +228,10 @@ public class SiosLib implements AutoCloseable {
             throw new IllegalArgumentException("Given digital output states are null");
         }
 
-        if (state.length > 8) {
-            throw new IllegalArgumentException("Digital output state must have at most eight parameters");
+        int digitalOutputChannels = DigitalOutputState.values().length / 2;
+
+        if (state.length > digitalOutputChannels) {
+            throw new IllegalArgumentException("Digital output state must have at most " + digitalOutputChannels + " parameters");
         }
 
         Set<DigitalOutputState> states = new HashSet<>(Arrays.asList(state));
@@ -249,8 +251,11 @@ public class SiosLib implements AutoCloseable {
             i++;
         }
 
-        boolean newOutputState[] = intToBooleanArray(this.digitalOutputValue);
-        Boolean desiredOutputState[] = new Boolean[8];
+        boolean[] newOutputState = new boolean[digitalOutputChannels];
+        for (i = 0; i < digitalOutputChannels; ++i) {
+            newOutputState[i] = (this.digitalOutputValue & (1 << i)) != 0;
+        }
+        Boolean[] desiredOutputState = new Boolean[digitalOutputChannels];
 
         i = 0;
         boolean onOrOff = true;
@@ -263,20 +268,12 @@ public class SiosLib implements AutoCloseable {
             i += 1;
         }
 
-        for (i = 0; i < 8; i++) {
+        for (i = 0; i < digitalOutputChannels; i++) {
             if (desiredOutputState[i] != null) {
                 newOutputState[i] = desiredOutputState[i];
             }
         }
         setDigitalOutputState(newOutputState);
-    }
-
-    public static boolean[] intToBooleanArray(int value) {
-        boolean[] result = new boolean[8];
-        for (int i = 0; i < 8; ++i) {
-            result[i] = (value & (1 << i)) != 0;
-        }
-        return result;
     }
 
     public void waitForNextSlot() {
