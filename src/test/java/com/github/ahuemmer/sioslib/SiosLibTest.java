@@ -448,6 +448,21 @@ public class SiosLibTest {
     class SetDigitalOutputStateStateFlags {
 
         @Test
+        @DisplayName("throws IllegalArgumentException if desired output states are null")
+        void throws_IllegalArgumentException_if_desired_output_states_are_null() {
+            try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
+                prepareSerialPortMock();
+
+                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+
+                SiosLib siosLib = new SiosLib(SIOS_MODE);
+
+                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState((SiosLib.DigitalOutputState) null));
+            }
+        }
+
+        @Test
         @DisplayName("throws IllegalArgumentException on contradictory state flags")
         void throws_IllegalArgumentException_on_contradictory_state_flags() {
             try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {

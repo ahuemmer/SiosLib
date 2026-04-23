@@ -223,26 +223,36 @@ public class SiosLib implements AutoCloseable {
     }
 
     public void setDigitalOutputState(DigitalOutputState... state) {
+
+        if (state[0] == null) {
+            throw new IllegalArgumentException("Given digital output states are null");
+        }
+
         if (state.length > 8) {
             throw new IllegalArgumentException("Digital output state must have at most eight parameters");
         }
 
         Set<DigitalOutputState> states = new HashSet<>(Arrays.asList(state));
-        if ((states.contains(DigitalOutputState.OUTPUT_0_OFF) && states.contains(DigitalOutputState.OUTPUT_0_ON)) ||
-                (states.contains(DigitalOutputState.OUTPUT_1_OFF) && states.contains(DigitalOutputState.OUTPUT_1_ON)) ||
-                (states.contains(DigitalOutputState.OUTPUT_2_OFF) && states.contains(DigitalOutputState.OUTPUT_2_ON)) ||
-                (states.contains(DigitalOutputState.OUTPUT_3_OFF) && states.contains(DigitalOutputState.OUTPUT_3_ON)) ||
-                (states.contains(DigitalOutputState.OUTPUT_4_OFF) && states.contains(DigitalOutputState.OUTPUT_4_ON)) ||
-                (states.contains(DigitalOutputState.OUTPUT_5_OFF) && states.contains(DigitalOutputState.OUTPUT_5_ON)) ||
-                (states.contains(DigitalOutputState.OUTPUT_6_OFF) && states.contains(DigitalOutputState.OUTPUT_6_ON)) ||
-                (states.contains(DigitalOutputState.OUTPUT_7_OFF) && states.contains(DigitalOutputState.OUTPUT_7_ON))) {
-            throw new IllegalArgumentException("Contradictory output states (ON and OFF for the same channel) given");
+
+        int i = 0;
+
+        boolean stateOn = false;
+
+        for (DigitalOutputState digitalOutputState : DigitalOutputState.values()) {
+            if (i % 2 == 0) {
+                stateOn = states.contains(digitalOutputState);
+            } else {
+                if (stateOn && states.contains(digitalOutputState)) {
+                    throw new IllegalArgumentException("Contradictory output states (ON and OFF for the same channel) given");
+                }
+            }
+            i++;
         }
 
         boolean newOutputState[] = intToBooleanArray(this.digitalOutputValue);
         Boolean desiredOutputState[] = new Boolean[8];
 
-        int i = 0;
+        i = 0;
         boolean onOrOff = true;
 
         for (DigitalOutputState digitalOutputState : DigitalOutputState.values()) {
