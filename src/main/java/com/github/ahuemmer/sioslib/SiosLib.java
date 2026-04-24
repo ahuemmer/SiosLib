@@ -222,7 +222,7 @@ public class SiosLib implements AutoCloseable {
         return this.digitalOutputValue;
     }
 
-    public void setDigitalOutputState(DigitalOutputState... state) {
+    public void changeDigitalOutputState(DigitalOutputState... state) {
 
         if (state[0] == null) {
             throw new IllegalArgumentException("Given digital output states are null");

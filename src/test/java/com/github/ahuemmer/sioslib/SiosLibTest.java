@@ -365,7 +365,7 @@ public class SiosLibTest {
     }
 
     @Nested
-    @DisplayName("setDigitalOutputState with boolean array")
+    @DisplayName("changeDigitalOutputState with boolean array")
     class SetDigitalOutputStateWithBooleanArray {
 
         @ParameterizedTest
@@ -444,7 +444,7 @@ public class SiosLibTest {
     }
 
     @Nested
-    @DisplayName("setDigitalOutputState with state flags")
+    @DisplayName("changeDigitalOutputState with state flags")
     class SetDigitalOutputStateStateFlags {
 
         @Test
@@ -458,7 +458,7 @@ public class SiosLibTest {
 
                 SiosLib siosLib = new SiosLib(SIOS_MODE);
 
-                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState((SiosLib.DigitalOutputState) null));
+                assertThrows(IllegalArgumentException.class, () -> siosLib.changeDigitalOutputState((SiosLib.DigitalOutputState) null));
             }
         }
 
@@ -473,14 +473,14 @@ public class SiosLibTest {
 
                 SiosLib siosLib = new SiosLib(SIOS_MODE);
 
-                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_0_OFF));
-                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_1_ON, SiosLib.DigitalOutputState.OUTPUT_1_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF));
-                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_1_ON, SiosLib.DigitalOutputState.OUTPUT_2_ON, SiosLib.DigitalOutputState.OUTPUT_2_OFF));
-                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_7_ON, SiosLib.DigitalOutputState.OUTPUT_3_ON, SiosLib.DigitalOutputState.OUTPUT_3_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF));
-                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_4_ON, SiosLib.DigitalOutputState.OUTPUT_2_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF));
-                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_1_ON, SiosLib.DigitalOutputState.OUTPUT_5_ON, SiosLib.DigitalOutputState.OUTPUT_5_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF));
-                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_4_OFF, SiosLib.DigitalOutputState.OUTPUT_6_ON, SiosLib.DigitalOutputState.OUTPUT_7_ON, SiosLib.DigitalOutputState.OUTPUT_6_OFF));
-                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_1_ON, SiosLib.DigitalOutputState.OUTPUT_7_ON, SiosLib.DigitalOutputState.OUTPUT_5_OFF, SiosLib.DigitalOutputState.OUTPUT_7_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF));
+                assertThrows(IllegalArgumentException.class, () -> siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_0_OFF));
+                assertThrows(IllegalArgumentException.class, () -> siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_1_ON, SiosLib.DigitalOutputState.OUTPUT_1_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF));
+                assertThrows(IllegalArgumentException.class, () -> siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_1_ON, SiosLib.DigitalOutputState.OUTPUT_2_ON, SiosLib.DigitalOutputState.OUTPUT_2_OFF));
+                assertThrows(IllegalArgumentException.class, () -> siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_7_ON, SiosLib.DigitalOutputState.OUTPUT_3_ON, SiosLib.DigitalOutputState.OUTPUT_3_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF));
+                assertThrows(IllegalArgumentException.class, () -> siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_4_ON, SiosLib.DigitalOutputState.OUTPUT_2_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF));
+                assertThrows(IllegalArgumentException.class, () -> siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_1_ON, SiosLib.DigitalOutputState.OUTPUT_5_ON, SiosLib.DigitalOutputState.OUTPUT_5_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF));
+                assertThrows(IllegalArgumentException.class, () -> siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_4_OFF, SiosLib.DigitalOutputState.OUTPUT_6_ON, SiosLib.DigitalOutputState.OUTPUT_7_ON, SiosLib.DigitalOutputState.OUTPUT_6_OFF));
+                assertThrows(IllegalArgumentException.class, () -> siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_1_ON, SiosLib.DigitalOutputState.OUTPUT_7_ON, SiosLib.DigitalOutputState.OUTPUT_5_OFF, SiosLib.DigitalOutputState.OUTPUT_7_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF));
             }
         }
 
@@ -495,7 +495,7 @@ public class SiosLibTest {
 
                 SiosLib siosLib = new SiosLib(SIOS_MODE);
 
-                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_0_OFF, SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_0_OFF, SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_0_OFF, SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_0_OFF, SiosLib.DigitalOutputState.OUTPUT_2_OFF));
+                assertThrows(IllegalArgumentException.class, () -> siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_0_OFF, SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_0_OFF, SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_0_OFF, SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_0_OFF, SiosLib.DigitalOutputState.OUTPUT_2_OFF));
             }
         }
 
@@ -512,19 +512,19 @@ public class SiosLibTest {
 
                 siosLib.setDigitalOutputValue(33); // 00100001
 
-                siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_0_OFF); // 00100000
+                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_0_OFF); // 00100000
 
                 assertEquals(32, siosLib.getDigitalOutputValue());
 
-                siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_5_OFF, SiosLib.DigitalOutputState.OUTPUT_2_ON); // 00000100
+                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_5_OFF, SiosLib.DigitalOutputState.OUTPUT_2_ON); // 00000100
 
                 assertEquals(4, siosLib.getDigitalOutputValue());
 
-                siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_7_ON, SiosLib.DigitalOutputState.OUTPUT_6_ON, SiosLib.DigitalOutputState.OUTPUT_4_OFF, SiosLib.DigitalOutputState.OUTPUT_3_ON, SiosLib.DigitalOutputState.OUTPUT_2_OFF, SiosLib.DigitalOutputState.OUTPUT_0_ON); // 11001001
+                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_7_ON, SiosLib.DigitalOutputState.OUTPUT_6_ON, SiosLib.DigitalOutputState.OUTPUT_4_OFF, SiosLib.DigitalOutputState.OUTPUT_3_ON, SiosLib.DigitalOutputState.OUTPUT_2_OFF, SiosLib.DigitalOutputState.OUTPUT_0_ON); // 11001001
 
                 assertEquals(201, siosLib.getDigitalOutputValue());
 
-                siosLib.setDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_3_ON, SiosLib.DigitalOutputState.OUTPUT_1_ON);
+                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_3_ON, SiosLib.DigitalOutputState.OUTPUT_1_ON);
 
                 assertEquals(203, siosLib.getDigitalOutputValue());
             }

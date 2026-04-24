@@ -128,11 +128,9 @@ class SiosLibIntegrationTest {
     /**
      * Sends a pattern to the digital output that makes the outer LEDs start lighting and then continues to the center
      * LEDs. This is repeated eight times.
-     *
-     * @throws Exception if the SIOSLab cannot be found or any other error occurs.
      */
     @Test
-    void sendNarrowingPattern() throws ExecutionException, InterruptedException {
+    void sendNarrowingPattern() {
         try (SiosLib siosLib = new SiosLib(TEST_MODE)) {
             for (int i = 0; i < 8; i++) {
                 assertTrue(siosLib.isConnected());
@@ -151,6 +149,35 @@ class SiosLibIntegrationTest {
                 siosLib.setDigitalOutputState(new boolean[]{true, false, false, false, false, false, false, true});
                 pause();
                 siosLib.setDigitalOutputState(new boolean[]{false, false, false, false, false, false, false, false});
+                pause();
+            }
+        }
+    }
+
+    /**
+     * Sends a pattern to the digital output that makes the outer LEDs start lighting and then continues to the center
+     * LEDs. Then the LEDs are switched off again, beginning with the outer LEDs. This is repeated eight times.
+     */
+    @Test
+    void sendNarrowingPattern2() {
+        try (SiosLib siosLib = new SiosLib(TEST_MODE)) {
+            assertTrue(siosLib.isConnected());
+            for (int i = 0; i < 8; i++) {
+                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_7_ON);
+                pause();
+                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_1_ON, SiosLib.DigitalOutputState.OUTPUT_6_ON);
+                pause();
+                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_2_ON, SiosLib.DigitalOutputState.OUTPUT_5_ON);
+                pause();
+                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_3_ON, SiosLib.DigitalOutputState.OUTPUT_4_ON);
+                pause();
+                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_0_OFF, SiosLib.DigitalOutputState.OUTPUT_7_OFF);
+                pause();
+                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_1_OFF, SiosLib.DigitalOutputState.OUTPUT_6_OFF);
+                pause();
+                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_2_OFF, SiosLib.DigitalOutputState.OUTPUT_5_OFF);
+                pause();
+                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_3_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF);
                 pause();
             }
         }

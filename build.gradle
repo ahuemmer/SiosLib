@@ -1,7 +1,60 @@
 plugins {
     id 'java'
     id 'idea'
+    id 'jacoco'
     id 'com.diffplug.spotless' version '8.4.0'
+    id 'maven-publish'
+}
+
+/*
+ * This file isn't uploaded to GitHub.
+ * At the moment, it just contains the GitHub token for the semantic release plugin,
+ * so you should come along very well without it. :)
+ */
+if (file('secrets.gradle').exists()) {
+    apply from: 'secrets.gradle'
+} else {
+    //Possibly we're using GitHub Actions, where the token is set automatically:
+    ext.ghToken = "$System.env.GITHUB_TOKEN"
+    ext.ghActor = "$System.env.GITHUB_ACTOR"
+}
+
+group = 'com.github.ahuemmer'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven {
+        url = 'https://jitpack.io'
+    }
+    maven {
+        url = 'https://repo.maven.apache.org/maven2'
+    }
+    maven {
+        url = 'https://maven.pkg.github.com/ahuemmer/storesthal'
+        credentials {
+            username = project.ghActor
+            password = project.ghToken
+        }
+    }
+}
+
+ext {
+    isGitLab = !"$System.env.CI_SERVER_HOST".isBlank() && !"$System.env.CI_SERVER_HOST".contains('github')
+    isGitHub = "$System.env.GITHUB_ACTIONS" == "true"
+}
+
+def gitTag = System.getenv('CI_COMMIT_TAG') ?: ''
+if (gitTag) {
+    project.version = gitTag.startsWith('v') ? gitTag.substring(1) : gitTag
+}
+
+sonar {
+    properties {
+        property "sonar.projectKey", "sioslab_sioslib_85238554-81e8-4027-9237-464f3b1a4b3c"
+        property "sonar.projectName", "SiosLib"
+        property "sonar.qualitygate.wait", true
+    }
 }
 
 dependencies {
@@ -18,12 +71,64 @@ dependencies {
     testRuntimeOnly group: 'org.junit.platform', name: 'junit-platform-launcher'
 }
 
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from(components.java)
+            artifact sourcesJar
+            artifact javadocJar
+
+            version = project.version.toString()
+        }
+    }
+
+    repositories {
+        if (project.isGitHub || !project.isGitLab) {
+            if (!project.version.endsWith('-SNAPSHOT')) {
+                maven {
+                    name = "GitHubPackages"
+                    url = "https://maven.pkg.github.com/ahuemmer/storesthal"
+                    credentials {
+                        username = project.ghActor ?: "$System.env.GH_ACTOR"
+                        password = project.ghToken ?: "$System.env.GH_TOKEN"
+                    }
+                }
+            }
+        }
+        if (!project.isGitHub) {
+            maven {
+                name = "local"
+                if (project.version.endsWith('-SNAPSHOT')) {
+                    url project.hasProperty('localSnapshotRepositoryUrl') ? project.localSnapshotRepositoryUrl : "$System.env.LOCAL_SNAPSHOT_REPOSITORY_URL"
+                    credentials {
+                        username = project.hasProperty('localSnapshotRepositoryUser') ? project.localSnapshotRepositoryUser : "$System.env.LOCAL_SNAPSHOT_REPOSITORY_USER"
+                        password = project.hasProperty('localSnapshotRepositoryPassword') ? project.localSnapshotRepositoryPassword : "$System.env.LOCAL_SNAPSHOT_REPOSITORY_PASSWORD"
+                    }
+                } else {
+                    url project.hasProperty('localReleaseRepositoryUrl') ? project.localReleaseRepositoryUrl : "$System.env.LOCAL_RELEASE_REPOSITORY_URL"
+                    credentials {
+                        username = project.hasProperty('localReleaseRepositoryUser') ? project.localReleaseRepositoryUser : "$System.env.LOCAL_RELEASE_REPOSITORY_USER"
+                        password = project.hasProperty('localReleaseRepositoryPassword') ? project.localReleaseRepositoryPassword : "$System.env.LOCAL_RELEASE_REPOSITORY_PASSWORD"
+                    }
+                }
+            }
+        }
+    }
+}
+
 test {
     useJUnitPlatform()
+    finalizedBy jacocoTestReport
 }
 
 spotless {
     java {
         palantirJavaFormat()
+    }
+}
+
+jacocoTestReport {
+    reports {
+        xml.required = true
     }
 }

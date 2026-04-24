@@ -1,0 +1,18 @@
+include:
+  - component: "$CI_SERVER_FQDN/external-projects/to-be-continuous/gradle/gitlab-ci-gradle@2.14.0"
+    inputs:
+      sbom-disabled: true
+      #sonar-quality-gate-enabled: true
+  - component: "$CI_SERVER_FQDN/external-projects/to-be-continuous/semantic-release/gitlab-ci-semrel@4.2.1"
+    inputs:
+      changelog-enabled: true
+      auto-release-enabled: true
+      info-on: "prod"
+      config-dir: ".gitlab"
+
+gradle-release:
+  rules:
+  - if: $GRADLE_NO_PUBLISH != "false"
+    when: never
+  - if: "$CI_COMMIT_TAG"
+    when: on_success
