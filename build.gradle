@@ -72,6 +72,16 @@ dependencies {
     testRuntimeOnly group: 'org.junit.platform', name: 'junit-platform-launcher'
 }
 
+task sourcesJar(type: Jar, dependsOn: classes) {
+    archiveClassifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    archiveClassifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
 publishing {
     publications {
         mavenJava(MavenPublication) {
@@ -131,16 +141,6 @@ spotless {
 javadoc {
     options.encoding = 'UTF-8'
     options.charSet = 'UTF-8'
-}
-
-task sourcesJar(type: Jar, dependsOn: classes) {
-    archiveClassifier = 'sources'
-    from sourceSets.main.allSource
-}
-
-task javadocJar(type: Jar, dependsOn: javadoc) {
-    archiveClassifier = 'javadoc'
-    from javadoc.destinationDir
 }
 
 jacocoTestReport {
