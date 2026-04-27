@@ -3,10 +3,6 @@ package com.github.ahuemmer.sioslib;
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.jspecify.annotations.Nullable;
-
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -14,6 +10,9 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.jspecify.annotations.Nullable;
 
 public class SiosLib implements AutoCloseable {
 
@@ -21,10 +20,10 @@ public class SiosLib implements AutoCloseable {
 
     private static final Logger LOG = LogManager.getLogger(SiosLib.class);
 
-    protected static final byte[] TEST_DATA_SEQUENCE = new byte[]{0x00, 0x00, 0x00, 0x01};
+    protected static final byte[] TEST_DATA_SEQUENCE = new byte[] {0x00, 0x00, 0x00, 0x01};
     protected static final byte[] SWITCH_MODE_SEQUENCE_PART_1 =
-            new byte[]{0x64, 0x1B, 0x03, -0x01}; // -1 means 255 as unsigned byte
-    protected static final byte[] SWITCH_MODE_SEQUENCE_PART_2 = new byte[]{0x66, 0x1B};
+            new byte[] {0x64, 0x1B, 0x03, -0x01}; // -1 means 255 as unsigned byte
+    protected static final byte[] SWITCH_MODE_SEQUENCE_PART_2 = new byte[] {0x66, 0x1B};
     protected static final byte CONTROL_SET_DIGITAL_OUTPUT_SIOS_MODE = 0x10;
     protected static final byte CONTROL_SET_DIGITAL_OUTPUT_COMPULAB_MODE = 0x51;
     protected static final byte CONTROL_SET_ANALOG_OUTPUT_1_SIOS_MODE = 0x48;
@@ -128,7 +127,7 @@ public class SiosLib implements AutoCloseable {
     private Boolean testSiosLab(SerialPort port) {
 
         for (byte b : TEST_DATA_SEQUENCE) {
-            port.writeBytes(new byte[]{b}, 1);
+            port.writeBytes(new byte[] {b}, 1);
         }
 
         byte[] buffer = new byte[1];
@@ -191,7 +190,7 @@ public class SiosLib implements AutoCloseable {
         try {
             sendData(data);
             byte[] result = responseFuture
-                    .completeOnTimeout(new byte[]{0}, RECEIVE_TIMEOUT, TimeUnit.MILLISECONDS)
+                    .completeOnTimeout(new byte[] {0}, RECEIVE_TIMEOUT, TimeUnit.MILLISECONDS)
                     .get();
             LOG.trace("Received: {}", () -> formatByteToString(result));
             return result;
@@ -201,8 +200,8 @@ public class SiosLib implements AutoCloseable {
     }
 
     private void sendData(byte data) {
-        LOG.trace("Sending: {}", () -> formatByteToString(new byte[]{data}));
-        siosLabPort.writeBytes(new byte[]{data}, 1);
+        LOG.trace("Sending: {}", () -> formatByteToString(new byte[] {data}));
+        siosLabPort.writeBytes(new byte[] {data}, 1);
         waitForNextSlot();
     }
 
@@ -241,12 +240,11 @@ public class SiosLib implements AutoCloseable {
             throw new IllegalArgumentException("Analog output value must be between 0 and 1023 in SIOS mode");
         }
         byte[] bytes = ByteBuffer.allocate(4).putInt(value).array();
-        byte[] bytesToSend = new byte[]{bytes[2], bytes[3]};
+        byte[] bytesToSend = new byte[] {bytes[2], bytes[3]};
         LOG.trace("Setting analog output value 1: {}|{} ({})", bytesToSend[1], bytesToSend[0], value);
         sendData(CONTROL_SET_ANALOG_OUTPUT_1_SIOS_MODE);
         sendData(bytesToSend[0]);
         sendData(bytesToSend[1]);
-
     }
 
     public void changeDigitalOutputState(DigitalOutputState... state) {
