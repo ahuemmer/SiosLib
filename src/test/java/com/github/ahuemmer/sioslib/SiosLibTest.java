@@ -1,29 +1,8 @@
 package com.github.ahuemmer.sioslib;
 
-import com.fazecast.jSerialComm.SerialPort;
-import com.fazecast.jSerialComm.SerialPortDataListener;
-import com.fazecast.jSerialComm.SerialPortEvent;
-import org.awaitility.Awaitility;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.Mock;
-import org.mockito.MockedStatic;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.stubbing.Answer;
-
-import java.time.Duration;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import static com.github.ahuemmer.sioslib.SiosLib.ANALOG_INPUT_1;
-import static com.github.ahuemmer.sioslib.SiosLib.CONTROL_SET_OUTPUT_COMPULAB_MODE;
-import static com.github.ahuemmer.sioslib.SiosLib.CONTROL_SET_OUTPUT_SIOS_MODE;
+import static com.github.ahuemmer.sioslib.SiosLib.CONTROL_SET_DIGITAL_OUTPUT_COMPULAB_MODE;
+import static com.github.ahuemmer.sioslib.SiosLib.CONTROL_SET_DIGITAL_OUTPUT_SIOS_MODE;
 import static com.github.ahuemmer.sioslib.SiosLib.SIOS_MODE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -40,6 +19,26 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.fazecast.jSerialComm.SerialPort;
+import com.fazecast.jSerialComm.SerialPortDataListener;
+import com.fazecast.jSerialComm.SerialPortEvent;
+import java.time.Duration;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.awaitility.Awaitility;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.stubbing.Answer;
+
 @ExtendWith(MockitoExtension.class)
 public class SiosLibTest {
 
@@ -54,7 +53,7 @@ public class SiosLibTest {
         @DisplayName("throws NoSerialPortFoundException, if no serial ports were found")
         void throws_NoSerialPortFoundException_if_no_COM_ports_were_found() {
             try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
-                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{});
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {});
                 assertThrows(NoSerialPortFoundException.class, () -> new SiosLib(SiosLib.SIOS_MODE));
             }
         }
@@ -66,14 +65,17 @@ public class SiosLibTest {
                 when(serialPort.openPort()).thenReturn(false);
                 when(serialPort.getSystemPortName()).thenReturn("Serial Port 123");
                 when(serialPort.getDescriptivePortName()).thenReturn("COM123");
-                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
-                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
                 assertThrows(NoSiosLabFoundException.class, () -> new SiosLib(SiosLib.SIOS_MODE));
             }
         }
 
         @Test
-        @DisplayName("tries to open every serial port and throws NoSiosLabFoundException, if no SIOSLab was found in time")
+        @DisplayName(
+                "tries to open every serial port and throws NoSiosLabFoundException, if no SIOSLab was found in time")
         void tries_to_open_every_serial_port_and_throws_NoSiosLabFoundException_if_no_SIOSLab_was_found_in_time() {
             try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
 
@@ -87,10 +89,15 @@ public class SiosLibTest {
                 when(serialPort2.getDescriptivePortName()).thenReturn("COM124");
                 when(serialPort2.openPort()).thenReturn(true);
 
-                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
-                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 124")).thenReturn(serialPort2);
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 124"))
+                        .thenReturn(serialPort2);
 
-                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort, serialPort2});
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort, serialPort2
+                });
 
                 assertThrows(NoSiosLabFoundException.class, () -> new SiosLib(SiosLib.SIOS_MODE));
                 verify(serialPort, times(1)).setBaudRate(SiosLib.BAUD_RATE);
@@ -102,8 +109,10 @@ public class SiosLibTest {
         }
 
         @Test
-        @DisplayName("tries to find a SIOSLab on an opened port and throws NoSiosLabFoundException, if it fails because of wrong answer from the interface")
-        void tries_to_find_a_SIOSLab_on_an_opened_port_and_throws_NoSiosLabFoundException_if_it_fails_because_of_wrong_answer_from_the_interface() {
+        @DisplayName(
+                "tries to find a SIOSLab on an opened port and throws NoSiosLabFoundException, if it fails because of wrong answer from the interface")
+        void
+                tries_to_find_a_SIOSLab_on_an_opened_port_and_throws_NoSiosLabFoundException_if_it_fails_because_of_wrong_answer_from_the_interface() {
             try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
 
                 when(serialPort.getSystemPortName()).thenReturn("Serial Port 123");
@@ -111,15 +120,19 @@ public class SiosLibTest {
                 when(serialPort.openPort()).thenReturn(true);
                 when(serialPort.bytesAvailable()).thenReturn(1);
                 doAnswer(invocation -> {
-                    byte[] buffer = invocation.getArgument(0);
-                    byte[] testData = {0x00};
-                    System.arraycopy(testData, 0, buffer, 0, testData.length);
-                    return testData.length;
-                }).when(serialPort).readBytes(any(byte[].class), eq(1));
+                            byte[] buffer = invocation.getArgument(0);
+                            byte[] testData = {0x00};
+                            System.arraycopy(testData, 0, buffer, 0, testData.length);
+                            return testData.length;
+                        })
+                        .when(serialPort)
+                        .readBytes(any(byte[].class), eq(1));
 
-                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
 
-                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
                 assertThrows(NoSiosLabFoundException.class, () -> new SiosLib(SiosLib.SIOS_MODE));
                 verify(serialPort, times(1)).setBaudRate(SiosLib.BAUD_RATE);
@@ -131,8 +144,10 @@ public class SiosLibTest {
         }
 
         @Test
-        @DisplayName("tries to find a SIOSLab on an opened port and throws NoSiosLabFoundException, if it fails because of wrong number of bytes available")
-        void tries_to_find_a_SIOSLab_on_an_opened_port_and_throws_NoSiosLabFoundException_if_it_fails_because_of_wrong_number_of_bytes_available() {
+        @DisplayName(
+                "tries to find a SIOSLab on an opened port and throws NoSiosLabFoundException, if it fails because of wrong number of bytes available")
+        void
+                tries_to_find_a_SIOSLab_on_an_opened_port_and_throws_NoSiosLabFoundException_if_it_fails_because_of_wrong_number_of_bytes_available() {
             try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
 
                 when(serialPort.getSystemPortName()).thenReturn("Serial Port 123");
@@ -140,9 +155,11 @@ public class SiosLibTest {
                 when(serialPort.openPort()).thenReturn(true);
                 when(serialPort.bytesAvailable()).thenReturn(5);
 
-                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
 
-                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
                 assertThrows(NoSiosLabFoundException.class, () -> new SiosLib(SiosLib.SIOS_MODE));
                 verify(serialPort, times(1)).setBaudRate(SiosLib.BAUD_RATE);
@@ -154,8 +171,10 @@ public class SiosLibTest {
         }
 
         @Test
-        @DisplayName("tries to find a SIOSLab on an opened port and throws NoSiosLabFoundException, if it fails because of wrong number of bytes read")
-        void tries_to_find_a_SIOSLab_on_an_opened_port_and_throws_NoSiosLabFoundException_if_it_fails_because_of_wrong_number_of_bytes_read() {
+        @DisplayName(
+                "tries to find a SIOSLab on an opened port and throws NoSiosLabFoundException, if it fails because of wrong number of bytes read")
+        void
+                tries_to_find_a_SIOSLab_on_an_opened_port_and_throws_NoSiosLabFoundException_if_it_fails_because_of_wrong_number_of_bytes_read() {
             try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
 
                 when(serialPort.getSystemPortName()).thenReturn("Serial Port 123");
@@ -163,15 +182,19 @@ public class SiosLibTest {
                 when(serialPort.openPort()).thenReturn(true);
                 when(serialPort.bytesAvailable()).thenReturn(1);
                 doAnswer(invocation -> {
-                    byte[] buffer = invocation.getArgument(0);
-                    byte[] testData = new byte[]{0x00};
-                    System.arraycopy(testData, 0, buffer, 0, testData.length);
-                    return 99;
-                }).when(serialPort).readBytes(any(byte[].class), eq(1));
+                            byte[] buffer = invocation.getArgument(0);
+                            byte[] testData = new byte[] {0x00};
+                            System.arraycopy(testData, 0, buffer, 0, testData.length);
+                            return 99;
+                        })
+                        .when(serialPort)
+                        .readBytes(any(byte[].class), eq(1));
 
-                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
 
-                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
                 assertThrows(NoSiosLabFoundException.class, () -> new SiosLib(SiosLib.SIOS_MODE));
                 verify(serialPort, times(1)).setBaudRate(SiosLib.BAUD_RATE);
@@ -194,15 +217,19 @@ public class SiosLibTest {
             when(serialPort.openPort()).thenReturn(true);
             when(serialPort.bytesAvailable()).thenReturn(1);
             doAnswer(invocation -> {
-                byte[] buffer = invocation.getArgument(0);
-                byte[] testData = new byte[]{SiosLib.MODE_INDICATOR_SIOSLAB};
-                System.arraycopy(testData, 0, buffer, 0, testData.length);
-                return testData.length;
-            }).when(serialPort).readBytes(any(byte[].class), eq(1));
+                        byte[] buffer = invocation.getArgument(0);
+                        byte[] testData = new byte[] {SiosLib.MODE_INDICATOR_SIOSLAB};
+                        System.arraycopy(testData, 0, buffer, 0, testData.length);
+                        return testData.length;
+                    })
+                    .when(serialPort)
+                    .readBytes(any(byte[].class), eq(1));
 
-            serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
+            serialPortStaticMock
+                    .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                    .thenReturn(serialPort);
 
-            serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+            serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
             long start = System.nanoTime();
             SiosLib siosLib = new SiosLib(mode);
@@ -214,8 +241,8 @@ public class SiosLibTest {
             verify(serialPort, times(1)).setNumStopBits(SerialPort.ONE_STOP_BIT);
             verify(serialPort, times(1)).setParity(SerialPort.NO_PARITY);
             verify(serialPort, times(1)).openPort();
-            verify(serialPort, times(mode == SiosLib.COMPULAB_MODE ? 4 : 6)).writeBytes(new byte[]{0x00}, 1);
-            verify(serialPort, times(mode == SiosLib.COMPULAB_MODE ? 3 : 1)).writeBytes(new byte[]{0x01}, 1);
+            verify(serialPort, times(mode == SiosLib.COMPULAB_MODE ? 4 : 6)).writeBytes(new byte[] {0x00}, 1);
+            verify(serialPort, times(mode == SiosLib.COMPULAB_MODE ? 3 : 1)).writeBytes(new byte[] {0x01}, 1);
             assertEquals(0, siosLib.getDigitalOutputValue());
         }
     }
@@ -227,8 +254,10 @@ public class SiosLibTest {
 
             prepareSerialPortMock();
 
-            serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
-            serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+            serialPortStaticMock
+                    .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                    .thenReturn(serialPort);
+            serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
             AtomicBoolean wasInterrupted = new AtomicBoolean(false);
 
@@ -258,8 +287,10 @@ public class SiosLibTest {
 
                 prepareSerialPortMock();
 
-                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
-                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
                 SiosLib siosLib = new SiosLib(SiosLib.SIOS_MODE);
 
@@ -283,35 +314,49 @@ public class SiosLibTest {
 
                 prepareSerialPortMock();
 
-                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
-                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
                 SiosLib siosLib = new SiosLib(mode);
 
                 when(serialPort.bytesAvailable()).thenReturn(1);
                 doAnswer(invocation -> {
-                    byte[] buffer = invocation.getArgument(0);
-                    byte[] testData = new byte[]{33};
-                    System.arraycopy(testData, 0, buffer, 0, testData.length);
-                    return testData.length;
-                }).when(serialPort).readBytes(any(byte[].class), eq(1));
+                            byte[] buffer = invocation.getArgument(0);
+                            byte[] testData = new byte[] {33};
+                            System.arraycopy(testData, 0, buffer, 0, testData.length);
+                            return testData.length;
+                        })
+                        .when(serialPort)
+                        .readBytes(any(byte[].class), eq(1));
 
                 doAnswer(invocation -> {
-                    SerialPortDataListener serialPortDataListener = invocation.getArgument(0);
-                    assertEquals(SerialPort.LISTENING_EVENT_DATA_AVAILABLE, serialPortDataListener.getListeningEvents());
+                            SerialPortDataListener serialPortDataListener = invocation.getArgument(0);
+                            assertEquals(
+                                    SerialPort.LISTENING_EVENT_DATA_AVAILABLE,
+                                    serialPortDataListener.getListeningEvents());
 
-                    // First fire another event that is to be ignored
-                    serialPortDataListener.serialEvent(new SerialPortEvent(serialPort, SerialPort.TIMEOUT_NONBLOCKING));
-                    Thread.sleep(10);
-                    serialPortDataListener.serialEvent(new SerialPortEvent(serialPort, SerialPort.LISTENING_EVENT_DATA_AVAILABLE));
-                    return null;
-                }).when(serialPort).addDataListener(any(SerialPortDataListener.class));
+                            // First fire another event that is to be ignored
+                            serialPortDataListener.serialEvent(
+                                    new SerialPortEvent(serialPort, SerialPort.TIMEOUT_NONBLOCKING));
+                            Thread.sleep(10);
+                            serialPortDataListener.serialEvent(
+                                    new SerialPortEvent(serialPort, SerialPort.LISTENING_EVENT_DATA_AVAILABLE));
+                            return null;
+                        })
+                        .when(serialPort)
+                        .addDataListener(any(SerialPortDataListener.class));
 
                 Awaitility.await()
                         .atMost(Duration.ofMillis(SiosLib.RECEIVE_TIMEOUT))
                         .untilAsserted(() -> assertEquals(33, siosLib.getDigitalValue()));
 
-                byte[] data = new byte[]{mode == SIOS_MODE ? SiosLib.CONTROL_SET_INPUT_DIGITAL_SIOS_MODE : SiosLib.CONTROL_SET_INPUT_DIGITAL_COMPULAB_MODE};
+                byte[] data = new byte[] {
+                    mode == SIOS_MODE
+                            ? SiosLib.CONTROL_SET_INPUT_DIGITAL_SIOS_MODE
+                            : SiosLib.CONTROL_SET_INPUT_DIGITAL_COMPULAB_MODE
+                };
                 verify(serialPort, times(1)).writeBytes(data, data.length);
             }
         }
@@ -319,13 +364,16 @@ public class SiosLibTest {
         @ParameterizedTest
         @DisplayName("returns 0 for digital value if no data could be fetched in time")
         @ValueSource(booleans = {SiosLib.SIOS_MODE, SiosLib.COMPULAB_MODE})
-        void returns_0_for_digital_value_if_no_data_could_be_fetched_in_time(boolean mode) throws ExecutionException, InterruptedException {
+        void returns_0_for_digital_value_if_no_data_could_be_fetched_in_time(boolean mode)
+                throws ExecutionException, InterruptedException {
             try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
 
                 prepareSerialPortMock();
 
-                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
-                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
                 SiosLib siosLib = new SiosLib(mode);
 
@@ -346,8 +394,10 @@ public class SiosLibTest {
 
                 prepareSerialPortMock();
 
-                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
-                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
                 SiosLib siosLib = new SiosLib(mode);
 
@@ -355,10 +405,12 @@ public class SiosLibTest {
 
                 siosLib.setDigitalOutputValue(5);
 
-                byte[] controlData = new byte[]{mode == SIOS_MODE ? CONTROL_SET_OUTPUT_SIOS_MODE : CONTROL_SET_OUTPUT_COMPULAB_MODE};
+                byte[] controlData = new byte[] {
+                    mode == SIOS_MODE ? CONTROL_SET_DIGITAL_OUTPUT_SIOS_MODE : CONTROL_SET_DIGITAL_OUTPUT_COMPULAB_MODE
+                };
 
                 verify(serialPort, times(1)).writeBytes(controlData, controlData.length);
-                verify(serialPort, times(1)).writeBytes(new byte[]{5}, 1);
+                verify(serialPort, times(1)).writeBytes(new byte[] {5}, 1);
                 assertEquals(5, siosLib.getDigitalOutputValue());
             }
         }
@@ -376,19 +428,23 @@ public class SiosLibTest {
 
                 prepareSerialPortMock();
 
-                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
-                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
                 SiosLib siosLib = new SiosLib(mode);
 
                 clearInvocations(serialPort);
 
-                siosLib.setDigitalOutputState(new boolean[]{true, false, true, false, true, false, true, false});
+                siosLib.setDigitalOutputState(new boolean[] {true, false, true, false, true, false, true, false});
 
-                byte[] controlData = new byte[]{mode == SIOS_MODE ? CONTROL_SET_OUTPUT_SIOS_MODE : CONTROL_SET_OUTPUT_COMPULAB_MODE};
+                byte[] controlData = new byte[] {
+                    mode == SIOS_MODE ? CONTROL_SET_DIGITAL_OUTPUT_SIOS_MODE : CONTROL_SET_DIGITAL_OUTPUT_COMPULAB_MODE
+                };
 
                 verify(serialPort, times(1)).writeBytes(controlData, controlData.length);
-                verify(serialPort, times(1)).writeBytes(new byte[]{85}, 1);
+                verify(serialPort, times(1)).writeBytes(new byte[] {85}, 1);
                 assertEquals(85, siosLib.getDigitalOutputValue());
             }
         }
@@ -401,8 +457,10 @@ public class SiosLibTest {
 
                 prepareSerialPortMock();
 
-                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
-                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
                 SiosLib siosLib = new SiosLib(SIOS_MODE);
 
@@ -410,7 +468,9 @@ public class SiosLibTest {
 
                 assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState((boolean[]) null));
 
-                byte[] controlData = new byte[]{mode == SIOS_MODE ? CONTROL_SET_OUTPUT_SIOS_MODE : CONTROL_SET_OUTPUT_COMPULAB_MODE};
+                byte[] controlData = new byte[] {
+                    mode == SIOS_MODE ? CONTROL_SET_DIGITAL_OUTPUT_SIOS_MODE : CONTROL_SET_DIGITAL_OUTPUT_COMPULAB_MODE
+                };
 
                 verify(serialPort, times(0)).writeBytes(controlData, controlData.length);
             }
@@ -424,23 +484,28 @@ public class SiosLibTest {
 
                 prepareSerialPortMock();
 
-                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
-                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
                 SiosLib siosLib = new SiosLib(SIOS_MODE);
 
                 clearInvocations(serialPort);
 
-                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(new boolean[]{true}));
-                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(new boolean[]{true, true, true, true, true, true, true, true, true}));
+                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(new boolean[] {true}));
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> siosLib.setDigitalOutputState(
+                                new boolean[] {true, true, true, true, true, true, true, true, true}));
 
-                byte[] controlData = new byte[]{mode == SIOS_MODE ? CONTROL_SET_OUTPUT_SIOS_MODE : CONTROL_SET_OUTPUT_COMPULAB_MODE};
+                byte[] controlData = new byte[] {
+                    mode == SIOS_MODE ? CONTROL_SET_DIGITAL_OUTPUT_SIOS_MODE : CONTROL_SET_DIGITAL_OUTPUT_COMPULAB_MODE
+                };
 
                 verify(serialPort, times(0)).writeBytes(controlData, controlData.length);
             }
         }
-
-
     }
 
     @Nested
@@ -453,12 +518,16 @@ public class SiosLibTest {
             try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
                 prepareSerialPortMock();
 
-                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
-                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
                 SiosLib siosLib = new SiosLib(SIOS_MODE);
 
-                assertThrows(IllegalArgumentException.class, () -> siosLib.changeDigitalOutputState((SiosLib.DigitalOutputState) null));
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> siosLib.changeDigitalOutputState((SiosLib.DigitalOutputState) null));
             }
         }
 
@@ -468,19 +537,64 @@ public class SiosLibTest {
             try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
                 prepareSerialPortMock();
 
-                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
-                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
                 SiosLib siosLib = new SiosLib(SIOS_MODE);
 
-                assertThrows(IllegalArgumentException.class, () -> siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_0_OFF));
-                assertThrows(IllegalArgumentException.class, () -> siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_1_ON, SiosLib.DigitalOutputState.OUTPUT_1_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF));
-                assertThrows(IllegalArgumentException.class, () -> siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_1_ON, SiosLib.DigitalOutputState.OUTPUT_2_ON, SiosLib.DigitalOutputState.OUTPUT_2_OFF));
-                assertThrows(IllegalArgumentException.class, () -> siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_7_ON, SiosLib.DigitalOutputState.OUTPUT_3_ON, SiosLib.DigitalOutputState.OUTPUT_3_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF));
-                assertThrows(IllegalArgumentException.class, () -> siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_4_ON, SiosLib.DigitalOutputState.OUTPUT_2_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF));
-                assertThrows(IllegalArgumentException.class, () -> siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_1_ON, SiosLib.DigitalOutputState.OUTPUT_5_ON, SiosLib.DigitalOutputState.OUTPUT_5_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF));
-                assertThrows(IllegalArgumentException.class, () -> siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_4_OFF, SiosLib.DigitalOutputState.OUTPUT_6_ON, SiosLib.DigitalOutputState.OUTPUT_7_ON, SiosLib.DigitalOutputState.OUTPUT_6_OFF));
-                assertThrows(IllegalArgumentException.class, () -> siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_1_ON, SiosLib.DigitalOutputState.OUTPUT_7_ON, SiosLib.DigitalOutputState.OUTPUT_5_OFF, SiosLib.DigitalOutputState.OUTPUT_7_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF));
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> siosLib.changeDigitalOutputState(
+                                SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_0_OFF));
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> siosLib.changeDigitalOutputState(
+                                SiosLib.DigitalOutputState.OUTPUT_1_ON,
+                                SiosLib.DigitalOutputState.OUTPUT_1_OFF,
+                                SiosLib.DigitalOutputState.OUTPUT_4_OFF));
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> siosLib.changeDigitalOutputState(
+                                SiosLib.DigitalOutputState.OUTPUT_1_ON,
+                                SiosLib.DigitalOutputState.OUTPUT_2_ON,
+                                SiosLib.DigitalOutputState.OUTPUT_2_OFF));
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> siosLib.changeDigitalOutputState(
+                                SiosLib.DigitalOutputState.OUTPUT_7_ON,
+                                SiosLib.DigitalOutputState.OUTPUT_3_ON,
+                                SiosLib.DigitalOutputState.OUTPUT_3_OFF,
+                                SiosLib.DigitalOutputState.OUTPUT_4_OFF));
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> siosLib.changeDigitalOutputState(
+                                SiosLib.DigitalOutputState.OUTPUT_4_ON,
+                                SiosLib.DigitalOutputState.OUTPUT_2_OFF,
+                                SiosLib.DigitalOutputState.OUTPUT_4_OFF));
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> siosLib.changeDigitalOutputState(
+                                SiosLib.DigitalOutputState.OUTPUT_1_ON,
+                                SiosLib.DigitalOutputState.OUTPUT_5_ON,
+                                SiosLib.DigitalOutputState.OUTPUT_5_OFF,
+                                SiosLib.DigitalOutputState.OUTPUT_4_OFF));
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> siosLib.changeDigitalOutputState(
+                                SiosLib.DigitalOutputState.OUTPUT_4_OFF,
+                                SiosLib.DigitalOutputState.OUTPUT_6_ON,
+                                SiosLib.DigitalOutputState.OUTPUT_7_ON,
+                                SiosLib.DigitalOutputState.OUTPUT_6_OFF));
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> siosLib.changeDigitalOutputState(
+                                SiosLib.DigitalOutputState.OUTPUT_1_ON,
+                                SiosLib.DigitalOutputState.OUTPUT_7_ON,
+                                SiosLib.DigitalOutputState.OUTPUT_5_OFF,
+                                SiosLib.DigitalOutputState.OUTPUT_7_OFF,
+                                SiosLib.DigitalOutputState.OUTPUT_4_OFF));
             }
         }
 
@@ -490,12 +604,25 @@ public class SiosLibTest {
             try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
                 prepareSerialPortMock();
 
-                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
-                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
                 SiosLib siosLib = new SiosLib(SIOS_MODE);
 
-                assertThrows(IllegalArgumentException.class, () -> siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_0_OFF, SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_0_OFF, SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_0_OFF, SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_0_OFF, SiosLib.DigitalOutputState.OUTPUT_2_OFF));
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> siosLib.changeDigitalOutputState(
+                                SiosLib.DigitalOutputState.OUTPUT_0_ON,
+                                SiosLib.DigitalOutputState.OUTPUT_0_OFF,
+                                SiosLib.DigitalOutputState.OUTPUT_0_ON,
+                                SiosLib.DigitalOutputState.OUTPUT_0_OFF,
+                                SiosLib.DigitalOutputState.OUTPUT_0_ON,
+                                SiosLib.DigitalOutputState.OUTPUT_0_OFF,
+                                SiosLib.DigitalOutputState.OUTPUT_0_ON,
+                                SiosLib.DigitalOutputState.OUTPUT_0_OFF,
+                                SiosLib.DigitalOutputState.OUTPUT_2_OFF));
             }
         }
 
@@ -505,8 +632,10 @@ public class SiosLibTest {
             try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
                 prepareSerialPortMock();
 
-                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
-                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
                 SiosLib siosLib = new SiosLib(SIOS_MODE);
 
@@ -516,20 +645,27 @@ public class SiosLibTest {
 
                 assertEquals(32, siosLib.getDigitalOutputValue());
 
-                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_5_OFF, SiosLib.DigitalOutputState.OUTPUT_2_ON); // 00000100
+                siosLib.changeDigitalOutputState(
+                        SiosLib.DigitalOutputState.OUTPUT_5_OFF, SiosLib.DigitalOutputState.OUTPUT_2_ON); // 00000100
 
                 assertEquals(4, siosLib.getDigitalOutputValue());
 
-                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_7_ON, SiosLib.DigitalOutputState.OUTPUT_6_ON, SiosLib.DigitalOutputState.OUTPUT_4_OFF, SiosLib.DigitalOutputState.OUTPUT_3_ON, SiosLib.DigitalOutputState.OUTPUT_2_OFF, SiosLib.DigitalOutputState.OUTPUT_0_ON); // 11001001
+                siosLib.changeDigitalOutputState(
+                        SiosLib.DigitalOutputState.OUTPUT_7_ON,
+                        SiosLib.DigitalOutputState.OUTPUT_6_ON,
+                        SiosLib.DigitalOutputState.OUTPUT_4_OFF,
+                        SiosLib.DigitalOutputState.OUTPUT_3_ON,
+                        SiosLib.DigitalOutputState.OUTPUT_2_OFF,
+                        SiosLib.DigitalOutputState.OUTPUT_0_ON); // 11001001
 
                 assertEquals(201, siosLib.getDigitalOutputValue());
 
-                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_3_ON, SiosLib.DigitalOutputState.OUTPUT_1_ON);
+                siosLib.changeDigitalOutputState(
+                        SiosLib.DigitalOutputState.OUTPUT_3_ON, SiosLib.DigitalOutputState.OUTPUT_1_ON);
 
                 assertEquals(203, siosLib.getDigitalOutputValue());
             }
         }
-
     }
 
     @Nested
@@ -539,51 +675,66 @@ public class SiosLibTest {
         @ParameterizedTest
         @DisplayName("returns a valid analog value if data could be fetched in time in SIOS mode")
         @ValueSource(booleans = {SiosLib.ANALOG_INPUT_1, SiosLib.ANALOG_INPUT_2})
-        void returns_a_valid_analog_1_value_if_data_could_be_fetched_in_time_in_sios_mode(boolean input) throws
-                ExecutionException, InterruptedException {
+        void returns_a_valid_analog_1_value_if_data_could_be_fetched_in_time_in_sios_mode(boolean input)
+                throws ExecutionException, InterruptedException {
             try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
 
                 prepareSerialPortMock();
 
-                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
-                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
                 SiosLib siosLib = new SiosLib(SIOS_MODE);
 
-                clearInvocations(serialPort); // important, as 0x01 (both CONTROL_GET_NEXT_BYTE and part of the TEST_DATA_SEQUENCE) is also sent during initialization
+                clearInvocations(serialPort); // important, as 0x01 (both CONTROL_GET_NEXT_BYTE and part of the
+                // TEST_DATA_SEQUENCE) is also sent during initialization
 
                 when(serialPort.bytesAvailable()).thenReturn(1);
 
                 doAnswer(new Answer() {
-                    int answerCount = 0;
+                            int answerCount = 0;
 
-                    @Override
-                    public Object answer(InvocationOnMock invocation) {
-                        byte[] buffer = invocation.getArgument(0);
-                        byte[] testData = answerCount == 0 ? new byte[]{0x01} : new byte[]{0x10};
-                        System.arraycopy(testData, 0, buffer, 0, testData.length);
-                        answerCount++;
-                        return testData.length;
-                    }
-                }).when(serialPort).readBytes(any(byte[].class), eq(1));
+                            @Override
+                            public Object answer(InvocationOnMock invocation) {
+                                byte[] buffer = invocation.getArgument(0);
+                                byte[] testData = answerCount == 0 ? new byte[] {0x01} : new byte[] {0x10};
+                                System.arraycopy(testData, 0, buffer, 0, testData.length);
+                                answerCount++;
+                                return testData.length;
+                            }
+                        })
+                        .when(serialPort)
+                        .readBytes(any(byte[].class), eq(1));
 
                 doAnswer(invocation -> {
-                    SerialPortDataListener serialPortDataListener = invocation.getArgument(0);
-                    assertEquals(SerialPort.LISTENING_EVENT_DATA_AVAILABLE, serialPortDataListener.getListeningEvents());
+                            SerialPortDataListener serialPortDataListener = invocation.getArgument(0);
+                            assertEquals(
+                                    SerialPort.LISTENING_EVENT_DATA_AVAILABLE,
+                                    serialPortDataListener.getListeningEvents());
 
-                    // First fire another event that is to be ignored
-                    serialPortDataListener.serialEvent(new SerialPortEvent(serialPort, SerialPort.TIMEOUT_NONBLOCKING));
-                    Thread.sleep(10);
-                    serialPortDataListener.serialEvent(new SerialPortEvent(serialPort, SerialPort.LISTENING_EVENT_DATA_AVAILABLE));
-                    return null;
-                }).when(serialPort).addDataListener(any(SerialPortDataListener.class));
+                            // First fire another event that is to be ignored
+                            serialPortDataListener.serialEvent(
+                                    new SerialPortEvent(serialPort, SerialPort.TIMEOUT_NONBLOCKING));
+                            Thread.sleep(10);
+                            serialPortDataListener.serialEvent(
+                                    new SerialPortEvent(serialPort, SerialPort.LISTENING_EVENT_DATA_AVAILABLE));
+                            return null;
+                        })
+                        .when(serialPort)
+                        .addDataListener(any(SerialPortDataListener.class));
 
                 Awaitility.await()
                         .atMost(Duration.ofMillis(SiosLib.RECEIVE_TIMEOUT))
                         .untilAsserted(() -> assertEquals(272, siosLib.getAnalogValue(input)));
 
-                byte[] data = new byte[]{input == ANALOG_INPUT_1 ? SiosLib.CONTROL_SET_INPUT_ANALOG_1_SIOS_MODE : SiosLib.CONTROL_SET_INPUT_ANALOG_2_SIOS_MODE};
-                byte[] nextByteData = new byte[]{SiosLib.CONTROL_GET_NEXT_BYTE};
+                byte[] data = new byte[] {
+                    input == ANALOG_INPUT_1
+                            ? SiosLib.CONTROL_SET_INPUT_ANALOG_1_SIOS_MODE
+                            : SiosLib.CONTROL_SET_INPUT_ANALOG_2_SIOS_MODE
+                };
+                byte[] nextByteData = new byte[] {SiosLib.CONTROL_GET_NEXT_BYTE};
                 verify(serialPort, times(1)).writeBytes(data, data.length);
                 verify(serialPort, times(1)).writeBytes(nextByteData, nextByteData.length);
             }
@@ -592,45 +743,60 @@ public class SiosLibTest {
         @ParameterizedTest
         @DisplayName("returns a valid analog value if data could be fetched in time for CompuLab mode")
         @ValueSource(booleans = {SiosLib.ANALOG_INPUT_1, SiosLib.ANALOG_INPUT_2})
-        void returns_a_valid_analog_value_if_data_could_be_fetched_in_time_for_CompuLab_mode(boolean input) throws
-                ExecutionException, InterruptedException {
+        void returns_a_valid_analog_value_if_data_could_be_fetched_in_time_for_CompuLab_mode(boolean input)
+                throws ExecutionException, InterruptedException {
             try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
 
                 prepareSerialPortMock();
 
-                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
-                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
                 SiosLib siosLib = new SiosLib(SiosLib.COMPULAB_MODE);
 
-                clearInvocations(serialPort); // important, as 0x01 (both CONTROL_GET_NEXT_BYTE and part of the TEST_DATA_SEQUENCE) is also sent during initialization
+                clearInvocations(serialPort); // important, as 0x01 (both CONTROL_GET_NEXT_BYTE and part of the
+                // TEST_DATA_SEQUENCE) is also sent during initialization
 
                 when(serialPort.bytesAvailable()).thenReturn(1);
 
                 doAnswer(invocation -> {
-                    byte[] buffer = invocation.getArgument(0);
-                    byte[] testData = new byte[]{0x10};
-                    System.arraycopy(testData, 0, buffer, 0, testData.length);
-                    return testData.length;
-                }).when(serialPort).readBytes(any(byte[].class), eq(1));
+                            byte[] buffer = invocation.getArgument(0);
+                            byte[] testData = new byte[] {0x10};
+                            System.arraycopy(testData, 0, buffer, 0, testData.length);
+                            return testData.length;
+                        })
+                        .when(serialPort)
+                        .readBytes(any(byte[].class), eq(1));
 
                 doAnswer(invocation -> {
-                    SerialPortDataListener serialPortDataListener = invocation.getArgument(0);
-                    assertEquals(SerialPort.LISTENING_EVENT_DATA_AVAILABLE, serialPortDataListener.getListeningEvents());
+                            SerialPortDataListener serialPortDataListener = invocation.getArgument(0);
+                            assertEquals(
+                                    SerialPort.LISTENING_EVENT_DATA_AVAILABLE,
+                                    serialPortDataListener.getListeningEvents());
 
-                    // First fire another event that is to be ignored
-                    serialPortDataListener.serialEvent(new SerialPortEvent(serialPort, SerialPort.TIMEOUT_NONBLOCKING));
-                    Thread.sleep(10);
-                    serialPortDataListener.serialEvent(new SerialPortEvent(serialPort, SerialPort.LISTENING_EVENT_DATA_AVAILABLE));
-                    return null;
-                }).when(serialPort).addDataListener(any(SerialPortDataListener.class));
+                            // First fire another event that is to be ignored
+                            serialPortDataListener.serialEvent(
+                                    new SerialPortEvent(serialPort, SerialPort.TIMEOUT_NONBLOCKING));
+                            Thread.sleep(10);
+                            serialPortDataListener.serialEvent(
+                                    new SerialPortEvent(serialPort, SerialPort.LISTENING_EVENT_DATA_AVAILABLE));
+                            return null;
+                        })
+                        .when(serialPort)
+                        .addDataListener(any(SerialPortDataListener.class));
 
                 Awaitility.await()
                         .atMost(Duration.ofMillis(SiosLib.RECEIVE_TIMEOUT))
                         .untilAsserted(() -> assertEquals(16, siosLib.getAnalogValue(input)));
 
-                byte[] data = new byte[]{input == ANALOG_INPUT_1 ? SiosLib.CONTROL_SET_INPUT_ANALOG_1_COMPULAB_MODE : SiosLib.CONTROL_SET_INPUT_ANALOG_2_COMPULAB_MODE};
-                byte[] nextByteData = new byte[]{SiosLib.CONTROL_GET_NEXT_BYTE};
+                byte[] data = new byte[] {
+                    input == ANALOG_INPUT_1
+                            ? SiosLib.CONTROL_SET_INPUT_ANALOG_1_COMPULAB_MODE
+                            : SiosLib.CONTROL_SET_INPUT_ANALOG_2_COMPULAB_MODE
+                };
+                byte[] nextByteData = new byte[] {SiosLib.CONTROL_GET_NEXT_BYTE};
                 verify(serialPort, times(1)).writeBytes(data, data.length);
                 verify(serialPort, times(0)).writeBytes(nextByteData, nextByteData.length);
             }
@@ -649,21 +815,28 @@ public class SiosLibTest {
                 prepareSerialPortMock();
                 when(serialPort.isOpen()).thenReturn(true);
 
-                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
-                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
-
-                try (SiosLib siosLib = new SiosLib(mode);) {
-                    assertTrue(siosLib.isConnected()); // This is not really necessary here, just to do "something" with the SiosLib...
+                try (SiosLib siosLib = new SiosLib(mode); ) {
+                    assertTrue(siosLib.isConnected()); // This is not really necessary here, just to do "something" with
+                    // the SiosLib...
                     clearInvocations(serialPort);
                 }
 
-                byte[] data = new byte[]{mode == SiosLib.SIOS_MODE ? CONTROL_SET_OUTPUT_SIOS_MODE : CONTROL_SET_OUTPUT_COMPULAB_MODE};
+                byte[] data = new byte[] {
+                    mode == SiosLib.SIOS_MODE
+                            ? CONTROL_SET_DIGITAL_OUTPUT_SIOS_MODE
+                            : CONTROL_SET_DIGITAL_OUTPUT_COMPULAB_MODE
+                };
 
                 verify(serialPort, times(1)).writeBytes(data, data.length);
-                verify(serialPort, times(1)).writeBytes(new byte[]{0}, 1);
+                verify(serialPort, times(1)).writeBytes(new byte[] {0}, 1);
 
-                verify(serialPort, timeout(2 * SiosLib.POLLING_INTERVAL).times(1)).closePort();
+                verify(serialPort, timeout(2 * SiosLib.POLLING_INTERVAL).times(1))
+                        .closePort();
             }
         }
 
@@ -674,8 +847,10 @@ public class SiosLibTest {
 
                 prepareSerialPortMock();
 
-                serialPortStaticMock.when(() -> SerialPort.getCommPort("Serial Port 123")).thenReturn(serialPort);
-                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[]{serialPort});
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
                 AtomicBoolean wasInterrupted = new AtomicBoolean(false);
 
@@ -701,11 +876,12 @@ public class SiosLibTest {
         when(serialPort.openPort()).thenReturn(true);
         when(serialPort.bytesAvailable()).thenReturn(1);
         doAnswer(invocation -> {
-            byte[] buffer = invocation.getArgument(0);
-            byte[] testData = new byte[]{SiosLib.MODE_INDICATOR_COMPULAB};
-            System.arraycopy(testData, 0, buffer, 0, testData.length);
-            return testData.length;
-        }).when(serialPort).readBytes(any(byte[].class), eq(1));
+                    byte[] buffer = invocation.getArgument(0);
+                    byte[] testData = new byte[] {SiosLib.MODE_INDICATOR_COMPULAB};
+                    System.arraycopy(testData, 0, buffer, 0, testData.length);
+                    return testData.length;
+                })
+                .when(serialPort)
+                .readBytes(any(byte[].class), eq(1));
     }
-
 }

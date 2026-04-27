@@ -1,6 +1,5 @@
 package com.github.ahuemmer.sioslib;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;
@@ -9,13 +8,12 @@ import java.util.concurrent.TimeUnit;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-
 /**
  * These tests can be run when a SIOSLab is attached to the PC and some inputs can be triggered.
  * <p>
  * These tests are not meant to be run automatically or assert anything but a SIOSLab connection.
  */
-@Disabled // Run these tests manually with a SIOSLab attached to the PC
+// @Disabled // Run these tests manually with a SIOSLab attached to the PC
 class SiosLibIntegrationTest {
 
     /**
@@ -163,21 +161,29 @@ class SiosLibIntegrationTest {
         try (SiosLib siosLib = new SiosLib(TEST_MODE)) {
             assertTrue(siosLib.isConnected());
             for (int i = 0; i < 8; i++) {
-                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_7_ON);
+                siosLib.changeDigitalOutputState(
+                        SiosLib.DigitalOutputState.OUTPUT_0_ON, SiosLib.DigitalOutputState.OUTPUT_7_ON);
                 pause();
-                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_1_ON, SiosLib.DigitalOutputState.OUTPUT_6_ON);
+                siosLib.changeDigitalOutputState(
+                        SiosLib.DigitalOutputState.OUTPUT_1_ON, SiosLib.DigitalOutputState.OUTPUT_6_ON);
                 pause();
-                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_2_ON, SiosLib.DigitalOutputState.OUTPUT_5_ON);
+                siosLib.changeDigitalOutputState(
+                        SiosLib.DigitalOutputState.OUTPUT_2_ON, SiosLib.DigitalOutputState.OUTPUT_5_ON);
                 pause();
-                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_3_ON, SiosLib.DigitalOutputState.OUTPUT_4_ON);
+                siosLib.changeDigitalOutputState(
+                        SiosLib.DigitalOutputState.OUTPUT_3_ON, SiosLib.DigitalOutputState.OUTPUT_4_ON);
                 pause();
-                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_0_OFF, SiosLib.DigitalOutputState.OUTPUT_7_OFF);
+                siosLib.changeDigitalOutputState(
+                        SiosLib.DigitalOutputState.OUTPUT_0_OFF, SiosLib.DigitalOutputState.OUTPUT_7_OFF);
                 pause();
-                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_1_OFF, SiosLib.DigitalOutputState.OUTPUT_6_OFF);
+                siosLib.changeDigitalOutputState(
+                        SiosLib.DigitalOutputState.OUTPUT_1_OFF, SiosLib.DigitalOutputState.OUTPUT_6_OFF);
                 pause();
-                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_2_OFF, SiosLib.DigitalOutputState.OUTPUT_5_OFF);
+                siosLib.changeDigitalOutputState(
+                        SiosLib.DigitalOutputState.OUTPUT_2_OFF, SiosLib.DigitalOutputState.OUTPUT_5_OFF);
                 pause();
-                siosLib.changeDigitalOutputState(SiosLib.DigitalOutputState.OUTPUT_3_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF);
+                siosLib.changeDigitalOutputState(
+                        SiosLib.DigitalOutputState.OUTPUT_3_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF);
                 pause();
             }
         }
