@@ -18,12 +18,22 @@ class SiosLibIntegrationTest {
     /**
      * Operating mode for the tests
      */
-    public static final boolean TEST_MODE = SiosLib.SIOS_MODE;
+    public static final SiosLib.SiosLabMode TEST_MODE = SiosLib.SiosLabMode.SIOS_MODE;
 
     /**
      * The analog input to use with the tests.
      */
     public static final boolean PREFERRED_ANALOG_INPUT = SiosLib.ANALOG_INPUT_1;
+
+    /**
+     * The analog output to use with the tests.
+     */
+    public static final boolean PREFERRED_ANALOG_OUTPUT = SiosLib.ANALOG_OUTPUT_1;
+
+    /**
+     * The analog output bitwidth to use with the tests.
+     */
+    public static final boolean PREFERRED_ANALOG_OUTPUT_BITWIDTH = SiosLib.BITWIDTH_10_BITS;
 
     /**
      * Data is read from the digital input and mirrored on the digital output.
@@ -62,7 +72,7 @@ class SiosLibIntegrationTest {
 
             long startTime = System.currentTimeMillis();
 
-            int maxValuePlusOne = TEST_MODE == SiosLib.SIOS_MODE ? 1024 : 256;
+            int maxValuePlusOne = TEST_MODE == SiosLib.SiosLabMode.SIOS_MODE ? 1024 : 256;
 
             while (System.currentTimeMillis() - startTime < 60000) {
                 int valueIn = siosLib.getAnalogValue(PREFERRED_ANALOG_INPUT);
@@ -185,6 +195,39 @@ class SiosLibIntegrationTest {
                         SiosLib.DigitalOutputState.OUTPUT_3_OFF, SiosLib.DigitalOutputState.OUTPUT_4_OFF);
                 pause();
             }
+        }
+    }
+
+    @Test
+    void setAnalogOutputValue() {
+        try (SiosLib siosLib = new SiosLib(TEST_MODE)) {
+            assertTrue(siosLib.isConnected());
+
+            int maxValue = PREFERRED_ANALOG_OUTPUT_BITWIDTH == SiosLib.BITWIDTH_10_BITS ? 1024 : 256;
+            int mutiplicator = PREFERRED_ANALOG_OUTPUT_BITWIDTH == SiosLib.BITWIDTH_10_BITS ? 16 : 4;
+
+            int factor = 1;
+            int value = 0;
+            while (value >= 0) {
+                if (value >= maxValue) {
+                    value = maxValue - 1;
+                    factor = -1;
+                }
+                siosLib.setAnalogOutputValue(PREFERRED_ANALOG_OUTPUT, PREFERRED_ANALOG_OUTPUT_BITWIDTH, value);
+                int factorDigital = 1;
+                int valueDigital = 0;
+                for (int i = 0; i <= 7; i++) {
+                    if (value > (maxValue * i * 0.125)) {
+                        valueDigital += factorDigital;
+                    }
+                    factorDigital *= 2;
+                }
+
+                siosLib.setDigitalOutputValue(valueDigital);
+                pause();
+                value += (factor * mutiplicator);
+            }
+            siosLib.setAnalogOutputValue(PREFERRED_ANALOG_OUTPUT, PREFERRED_ANALOG_OUTPUT_BITWIDTH, 0);
         }
     }
 

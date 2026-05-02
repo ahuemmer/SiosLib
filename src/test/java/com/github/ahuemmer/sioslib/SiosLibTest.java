@@ -3,7 +3,7 @@ package com.github.ahuemmer.sioslib;
 import static com.github.ahuemmer.sioslib.SiosLib.ANALOG_INPUT_1;
 import static com.github.ahuemmer.sioslib.SiosLib.CONTROL_SET_DIGITAL_OUTPUT_COMPULAB_MODE;
 import static com.github.ahuemmer.sioslib.SiosLib.CONTROL_SET_DIGITAL_OUTPUT_SIOS_MODE;
-import static com.github.ahuemmer.sioslib.SiosLib.SIOS_MODE;
+import static com.github.ahuemmer.sioslib.SiosLib.SiosLabMode.SIOS_MODE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -32,6 +32,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -54,7 +55,7 @@ public class SiosLibTest {
         void throws_NoSerialPortFoundException_if_no_COM_ports_were_found() {
             try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
                 serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {});
-                assertThrows(NoSerialPortFoundException.class, () -> new SiosLib(SiosLib.SIOS_MODE));
+                assertThrows(NoSerialPortFoundException.class, () -> new SiosLib(SiosLib.SiosLabMode.SIOS_MODE));
             }
         }
 
@@ -69,7 +70,7 @@ public class SiosLibTest {
                         .when(() -> SerialPort.getCommPort("Serial Port 123"))
                         .thenReturn(serialPort);
                 serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
-                assertThrows(NoSiosLabFoundException.class, () -> new SiosLib(SiosLib.SIOS_MODE));
+                assertThrows(NoSiosLabFoundException.class, () -> new SiosLib(SiosLib.SiosLabMode.SIOS_MODE));
             }
         }
 
@@ -99,7 +100,7 @@ public class SiosLibTest {
                 serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort, serialPort2
                 });
 
-                assertThrows(NoSiosLabFoundException.class, () -> new SiosLib(SiosLib.SIOS_MODE));
+                assertThrows(NoSiosLabFoundException.class, () -> new SiosLib(SiosLib.SiosLabMode.SIOS_MODE));
                 verify(serialPort, times(1)).setBaudRate(SiosLib.BAUD_RATE);
                 verify(serialPort, times(1)).setNumDataBits(SiosLib.NUM_DATABITS);
                 verify(serialPort, times(1)).setNumStopBits(SerialPort.ONE_STOP_BIT);
@@ -134,7 +135,7 @@ public class SiosLibTest {
 
                 serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
-                assertThrows(NoSiosLabFoundException.class, () -> new SiosLib(SiosLib.SIOS_MODE));
+                assertThrows(NoSiosLabFoundException.class, () -> new SiosLib(SiosLib.SiosLabMode.SIOS_MODE));
                 verify(serialPort, times(1)).setBaudRate(SiosLib.BAUD_RATE);
                 verify(serialPort, times(1)).setNumDataBits(SiosLib.NUM_DATABITS);
                 verify(serialPort, times(1)).setNumStopBits(SerialPort.ONE_STOP_BIT);
@@ -161,7 +162,7 @@ public class SiosLibTest {
 
                 serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
-                assertThrows(NoSiosLabFoundException.class, () -> new SiosLib(SiosLib.SIOS_MODE));
+                assertThrows(NoSiosLabFoundException.class, () -> new SiosLib(SiosLib.SiosLabMode.SIOS_MODE));
                 verify(serialPort, times(1)).setBaudRate(SiosLib.BAUD_RATE);
                 verify(serialPort, times(1)).setNumDataBits(SiosLib.NUM_DATABITS);
                 verify(serialPort, times(1)).setNumStopBits(SerialPort.ONE_STOP_BIT);
@@ -196,7 +197,7 @@ public class SiosLibTest {
 
                 serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
-                assertThrows(NoSiosLabFoundException.class, () -> new SiosLib(SiosLib.SIOS_MODE));
+                assertThrows(NoSiosLabFoundException.class, () -> new SiosLib(SiosLib.SiosLabMode.SIOS_MODE));
                 verify(serialPort, times(1)).setBaudRate(SiosLib.BAUD_RATE);
                 verify(serialPort, times(1)).setNumDataBits(SiosLib.NUM_DATABITS);
                 verify(serialPort, times(1)).setNumStopBits(SerialPort.ONE_STOP_BIT);
@@ -208,8 +209,8 @@ public class SiosLibTest {
 
     @ParameterizedTest
     @DisplayName("connects to SIOSLab")
-    @ValueSource(booleans = {SiosLib.SIOS_MODE, SiosLib.COMPULAB_MODE})
-    void connects_to_SIOSLab(boolean mode) {
+    @EnumSource(SiosLib.SiosLabMode.class)
+    void connects_to_SIOSLab(SiosLib.SiosLabMode mode) {
         try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
 
             when(serialPort.getSystemPortName()).thenReturn("Serial Port 123");
@@ -241,8 +242,10 @@ public class SiosLibTest {
             verify(serialPort, times(1)).setNumStopBits(SerialPort.ONE_STOP_BIT);
             verify(serialPort, times(1)).setParity(SerialPort.NO_PARITY);
             verify(serialPort, times(1)).openPort();
-            verify(serialPort, times(mode == SiosLib.COMPULAB_MODE ? 4 : 6)).writeBytes(new byte[] {0x00}, 1);
-            verify(serialPort, times(mode == SiosLib.COMPULAB_MODE ? 3 : 1)).writeBytes(new byte[] {0x01}, 1);
+            verify(serialPort, times(mode == SiosLib.SiosLabMode.COMPULAB_MODE ? 4 : 6))
+                    .writeBytes(new byte[] {0x00}, 1);
+            verify(serialPort, times(mode == SiosLib.SiosLabMode.COMPULAB_MODE ? 3 : 1))
+                    .writeBytes(new byte[] {0x01}, 1);
             assertEquals(0, siosLib.getDigitalOutputValue());
         }
     }
@@ -261,11 +264,11 @@ public class SiosLibTest {
 
             AtomicBoolean wasInterrupted = new AtomicBoolean(false);
 
-            SiosLib siosLib = new SiosLib(SiosLib.SIOS_MODE);
+            SiosLib siosLib = new SiosLib(SiosLib.SiosLabMode.SIOS_MODE);
 
             Thread testThread = new Thread(() -> {
                 Thread.currentThread().interrupt();
-                siosLib.switchMode(SiosLib.COMPULAB_MODE);
+                siosLib.switchMode(SiosLib.SiosLabMode.COMPULAB_MODE);
                 wasInterrupted.set(Thread.currentThread().isInterrupted());
             });
 
@@ -292,7 +295,7 @@ public class SiosLibTest {
                         .thenReturn(serialPort);
                 serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
-                SiosLib siosLib = new SiosLib(SiosLib.SIOS_MODE);
+                SiosLib siosLib = new SiosLib(SiosLib.SiosLabMode.SIOS_MODE);
 
                 when(serialPort.isOpen()).thenReturn(true);
                 assertTrue(siosLib.isConnected());
@@ -308,8 +311,8 @@ public class SiosLibTest {
 
         @ParameterizedTest
         @DisplayName("returns a valid digital value if data could be fetched in time")
-        @ValueSource(booleans = {SiosLib.SIOS_MODE, SiosLib.COMPULAB_MODE})
-        void returns_a_valid_digital_value_if_data_could_be_fetched_in_time(boolean mode) {
+        @EnumSource(SiosLib.SiosLabMode.class)
+        void returns_a_valid_digital_value_if_data_could_be_fetched_in_time(SiosLib.SiosLabMode mode) {
             try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
 
                 prepareSerialPortMock();
@@ -363,8 +366,8 @@ public class SiosLibTest {
 
         @ParameterizedTest
         @DisplayName("returns 0 for digital value if no data could be fetched in time")
-        @ValueSource(booleans = {SiosLib.SIOS_MODE, SiosLib.COMPULAB_MODE})
-        void returns_0_for_digital_value_if_no_data_could_be_fetched_in_time(boolean mode)
+        @EnumSource(SiosLib.SiosLabMode.class)
+        void returns_0_for_digital_value_if_no_data_could_be_fetched_in_time(SiosLib.SiosLabMode mode)
                 throws ExecutionException, InterruptedException {
             try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
 
@@ -388,8 +391,8 @@ public class SiosLibTest {
 
         @ParameterizedTest
         @DisplayName("sets output value")
-        @ValueSource(booleans = {SiosLib.SIOS_MODE, SiosLib.COMPULAB_MODE})
-        void sets_output_value_in_SIOS_mode(boolean mode) {
+        @EnumSource(SiosLib.SiosLabMode.class)
+        void sets_output_value_in_SIOS_mode(SiosLib.SiosLabMode mode) {
             try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
 
                 prepareSerialPortMock();
@@ -422,8 +425,8 @@ public class SiosLibTest {
 
         @ParameterizedTest
         @DisplayName("sets output state")
-        @ValueSource(booleans = {SiosLib.SIOS_MODE, SiosLib.COMPULAB_MODE})
-        void sets_output_state(boolean mode) {
+        @EnumSource(SiosLib.SiosLabMode.class)
+        void sets_output_state(SiosLib.SiosLabMode mode) {
             try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
 
                 prepareSerialPortMock();
@@ -451,8 +454,8 @@ public class SiosLibTest {
 
         @ParameterizedTest
         @DisplayName("throws IllegalArgumentException if outputstate is null")
-        @ValueSource(booleans = {SiosLib.SIOS_MODE, SiosLib.COMPULAB_MODE})
-        void throws_IllegalArgumentException_if_outputstate_is_null(boolean mode) {
+        @EnumSource(SiosLib.SiosLabMode.class)
+        void throws_IllegalArgumentException_if_outputstate_is_null(SiosLib.SiosLabMode mode) {
             try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
 
                 prepareSerialPortMock();
@@ -478,8 +481,8 @@ public class SiosLibTest {
 
         @ParameterizedTest
         @DisplayName("throws IllegalArgumentException if outputstate does not have exactly eight bits")
-        @ValueSource(booleans = {SiosLib.SIOS_MODE, SiosLib.COMPULAB_MODE})
-        void throws_IllegalArgumentException_if_outputstate_does_not_have_exactly_eight_bits(boolean mode) {
+        @EnumSource(SiosLib.SiosLabMode.class)
+        void throws_IllegalArgumentException_if_outputstate_does_not_have_exactly_eight_bits(SiosLib.SiosLabMode mode) {
             try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
 
                 prepareSerialPortMock();
@@ -754,7 +757,7 @@ public class SiosLibTest {
                         .thenReturn(serialPort);
                 serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
 
-                SiosLib siosLib = new SiosLib(SiosLib.COMPULAB_MODE);
+                SiosLib siosLib = new SiosLib(SiosLib.SiosLabMode.COMPULAB_MODE);
 
                 clearInvocations(serialPort); // important, as 0x01 (both CONTROL_GET_NEXT_BYTE and part of the
                 // TEST_DATA_SEQUENCE) is also sent during initialization
@@ -809,8 +812,8 @@ public class SiosLibTest {
 
         @ParameterizedTest
         @DisplayName("closes the port after usage")
-        @ValueSource(booleans = {SiosLib.SIOS_MODE, SiosLib.COMPULAB_MODE})
-        void closes_the_port_after_usage(boolean mode) {
+        @EnumSource(SiosLib.SiosLabMode.class)
+        void closes_the_port_after_usage(SiosLib.SiosLabMode mode) {
             try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
                 prepareSerialPortMock();
                 when(serialPort.isOpen()).thenReturn(true);
@@ -827,7 +830,7 @@ public class SiosLibTest {
                 }
 
                 byte[] data = new byte[] {
-                    mode == SiosLib.SIOS_MODE
+                    mode == SiosLib.SiosLabMode.SIOS_MODE
                             ? CONTROL_SET_DIGITAL_OUTPUT_SIOS_MODE
                             : CONTROL_SET_DIGITAL_OUTPUT_COMPULAB_MODE
                 };
@@ -854,7 +857,7 @@ public class SiosLibTest {
 
                 AtomicBoolean wasInterrupted = new AtomicBoolean(false);
 
-                SiosLib siosLib = new SiosLib(SiosLib.SIOS_MODE);
+                SiosLib siosLib = new SiosLib(SiosLib.SiosLabMode.SIOS_MODE);
 
                 Thread testThread = new Thread(() -> {
                     Thread.currentThread().interrupt();
@@ -884,4 +887,17 @@ public class SiosLibTest {
                 .when(serialPort)
                 .readBytes(any(byte[].class), eq(1));
     }
+
+    // TODO:
+    // 1. Die nachfolgenden Felder noch in Enums umwandeln:
+    //    public static final boolean ANALOG_INPUT_1 = true;
+    //    public static final boolean ANALOG_INPUT_2 = false;
+    //    public static final boolean ANALOG_OUTPUT_1 = true;
+    //    public static final boolean ANALOG_OUTPUT_2 = false;
+    //
+    //    public static final boolean BITWIDTH_10_BITS = true;
+    //    public static final boolean BITWIDTH_8_BITS = false;
+    //
+    // 2. Tests für die Methode setAnalogOutputValue schreiben.
+    // 3. Doku etc. für GitHub ergänzen.
 }
