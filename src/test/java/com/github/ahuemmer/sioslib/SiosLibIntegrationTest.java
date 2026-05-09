@@ -1,13 +1,12 @@
 package com.github.ahuemmer.sioslib;
 
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-
-import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 /**
  * These tests can be run when a SIOSLab is attached to the PC and some inputs can be triggered.
@@ -143,21 +142,21 @@ class SiosLibIntegrationTest {
         try (SiosLib siosLib = new SiosLib(TEST_MODE)) {
             for (int i = 0; i < 8; i++) {
                 assertTrue(siosLib.isConnected());
-                siosLib.setDigitalOutputState(new boolean[]{true, false, false, false, false, false, false, true});
+                siosLib.setDigitalOutputState(new boolean[] {true, false, false, false, false, false, false, true});
                 pause();
-                siosLib.setDigitalOutputState(new boolean[]{true, true, false, false, false, false, true, true});
+                siosLib.setDigitalOutputState(new boolean[] {true, true, false, false, false, false, true, true});
                 pause();
-                siosLib.setDigitalOutputState(new boolean[]{true, true, true, false, false, true, true, true});
+                siosLib.setDigitalOutputState(new boolean[] {true, true, true, false, false, true, true, true});
                 pause();
-                siosLib.setDigitalOutputState(new boolean[]{true, true, true, true, true, true, true, true});
+                siosLib.setDigitalOutputState(new boolean[] {true, true, true, true, true, true, true, true});
                 pause();
-                siosLib.setDigitalOutputState(new boolean[]{true, true, true, false, false, true, true, true});
+                siosLib.setDigitalOutputState(new boolean[] {true, true, true, false, false, true, true, true});
                 pause();
-                siosLib.setDigitalOutputState(new boolean[]{true, true, false, false, false, false, true, true});
+                siosLib.setDigitalOutputState(new boolean[] {true, true, false, false, false, false, true, true});
                 pause();
-                siosLib.setDigitalOutputState(new boolean[]{true, false, false, false, false, false, false, true});
+                siosLib.setDigitalOutputState(new boolean[] {true, false, false, false, false, false, false, true});
                 pause();
-                siosLib.setDigitalOutputState(new boolean[]{false, false, false, false, false, false, false, false});
+                siosLib.setDigitalOutputState(new boolean[] {false, false, false, false, false, false, false, false});
                 pause();
             }
         }
