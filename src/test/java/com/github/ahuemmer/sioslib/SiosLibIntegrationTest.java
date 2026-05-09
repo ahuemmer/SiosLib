@@ -1,18 +1,20 @@
 package com.github.ahuemmer.sioslib;
 
-import static org.awaitility.Awaitility.await;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.Test;
+
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * These tests can be run when a SIOSLab is attached to the PC and some inputs can be triggered.
  * <p>
  * These tests are not meant to be run automatically or assert anything but a SIOSLab connection.
  */
-// @Disabled // Run these tests manually with a SIOSLab attached to the PC
+@Disabled // Run these tests manually with a SIOSLab attached to the PC
 class SiosLibIntegrationTest {
 
     /**
@@ -23,17 +25,17 @@ class SiosLibIntegrationTest {
     /**
      * The analog input to use with the tests.
      */
-    public static final boolean PREFERRED_ANALOG_INPUT = SiosLib.ANALOG_INPUT_1;
+    public static final SiosLib.AnalogInput PREFERRED_ANALOG_INPUT = SiosLib.AnalogInput.ANALOG_INPUT_1;
 
     /**
      * The analog output to use with the tests.
      */
-    public static final boolean PREFERRED_ANALOG_OUTPUT = SiosLib.ANALOG_OUTPUT_1;
+    public static final SiosLib.AnalogOutput PREFERRED_ANALOG_OUTPUT = SiosLib.AnalogOutput.ANALOG_OUTPUT_1;
 
     /**
      * The analog output bitwidth to use with the tests.
      */
-    public static final boolean PREFERRED_ANALOG_OUTPUT_BITWIDTH = SiosLib.BITWIDTH_10_BITS;
+    public static final SiosLib.BitWidth PREFERRED_ANALOG_OUTPUT_BITWIDTH = SiosLib.BitWidth.BIT_WIDTH_10_BITS;
 
     /**
      * Data is read from the digital input and mirrored on the digital output.
@@ -141,21 +143,21 @@ class SiosLibIntegrationTest {
         try (SiosLib siosLib = new SiosLib(TEST_MODE)) {
             for (int i = 0; i < 8; i++) {
                 assertTrue(siosLib.isConnected());
-                siosLib.setDigitalOutputState(new boolean[] {true, false, false, false, false, false, false, true});
+                siosLib.setDigitalOutputState(new boolean[]{true, false, false, false, false, false, false, true});
                 pause();
-                siosLib.setDigitalOutputState(new boolean[] {true, true, false, false, false, false, true, true});
+                siosLib.setDigitalOutputState(new boolean[]{true, true, false, false, false, false, true, true});
                 pause();
-                siosLib.setDigitalOutputState(new boolean[] {true, true, true, false, false, true, true, true});
+                siosLib.setDigitalOutputState(new boolean[]{true, true, true, false, false, true, true, true});
                 pause();
-                siosLib.setDigitalOutputState(new boolean[] {true, true, true, true, true, true, true, true});
+                siosLib.setDigitalOutputState(new boolean[]{true, true, true, true, true, true, true, true});
                 pause();
-                siosLib.setDigitalOutputState(new boolean[] {true, true, true, false, false, true, true, true});
+                siosLib.setDigitalOutputState(new boolean[]{true, true, true, false, false, true, true, true});
                 pause();
-                siosLib.setDigitalOutputState(new boolean[] {true, true, false, false, false, false, true, true});
+                siosLib.setDigitalOutputState(new boolean[]{true, true, false, false, false, false, true, true});
                 pause();
-                siosLib.setDigitalOutputState(new boolean[] {true, false, false, false, false, false, false, true});
+                siosLib.setDigitalOutputState(new boolean[]{true, false, false, false, false, false, false, true});
                 pause();
-                siosLib.setDigitalOutputState(new boolean[] {false, false, false, false, false, false, false, false});
+                siosLib.setDigitalOutputState(new boolean[]{false, false, false, false, false, false, false, false});
                 pause();
             }
         }
@@ -203,8 +205,8 @@ class SiosLibIntegrationTest {
         try (SiosLib siosLib = new SiosLib(TEST_MODE)) {
             assertTrue(siosLib.isConnected());
 
-            int maxValue = PREFERRED_ANALOG_OUTPUT_BITWIDTH == SiosLib.BITWIDTH_10_BITS ? 1024 : 256;
-            int mutiplicator = PREFERRED_ANALOG_OUTPUT_BITWIDTH == SiosLib.BITWIDTH_10_BITS ? 16 : 4;
+            int maxValue = PREFERRED_ANALOG_OUTPUT_BITWIDTH.equals(SiosLib.BitWidth.BIT_WIDTH_10_BITS) ? 1024 : 256;
+            int mutiplicator = PREFERRED_ANALOG_OUTPUT_BITWIDTH.equals(SiosLib.BitWidth.BIT_WIDTH_10_BITS) ? 16 : 4;
 
             int factor = 1;
             int value = 0;
@@ -235,7 +237,7 @@ class SiosLibIntegrationTest {
         await().pollDelay(250, TimeUnit.MILLISECONDS).untilAsserted(() -> assertTrue(true));
     }
 
-    private void sendAndWait(SiosLib siosLib, int data) throws ExecutionException, InterruptedException {
+    private void sendAndWait(SiosLib siosLib, int data) {
         siosLib.setDigitalOutputValue(data);
         pause();
     }
