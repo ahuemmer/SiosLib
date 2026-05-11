@@ -3,6 +3,10 @@ package com.github.ahuemmer.sioslib;
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.jspecify.annotations.Nullable;
+
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -10,9 +14,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.jspecify.annotations.Nullable;
 
 public class SiosLib implements AutoCloseable {
 
@@ -20,10 +21,10 @@ public class SiosLib implements AutoCloseable {
 
     private static final Logger LOG = LogManager.getLogger(SiosLib.class);
 
-    protected static final byte[] TEST_DATA_SEQUENCE = new byte[] {0x00, 0x00, 0x00, 0x01};
+    protected static final byte[] TEST_DATA_SEQUENCE = new byte[]{0x00, 0x00, 0x00, 0x01};
     protected static final byte[] SWITCH_MODE_SEQUENCE_PART_1 =
-            new byte[] {0x64, 0x1B, 0x03, -0x01}; // -1 means 255 as unsigned byte
-    protected static final byte[] SWITCH_MODE_SEQUENCE_PART_2 = new byte[] {0x66, 0x1B};
+            new byte[]{0x64, 0x1B, 0x03, -0x01}; // -1 means 255 as unsigned byte
+    protected static final byte[] SWITCH_MODE_SEQUENCE_PART_2 = new byte[]{0x66, 0x1B};
     protected static final byte CONTROL_SET_DIGITAL_OUTPUT_SIOS_MODE = 0x10;
     protected static final byte CONTROL_SET_DIGITAL_OUTPUT_COMPULAB_MODE = 0x51;
     protected static final byte CONTROL_SET_ANALOG_OUTPUT_1_TEN_BITS_SIOS_MODE = 0x48;
@@ -34,8 +35,24 @@ public class SiosLib implements AutoCloseable {
     protected static final byte CONTROL_SET_INPUT_DIGITAL_COMPULAB_MODE = -0x2D;
     protected static final byte CONTROL_SET_INPUT_ANALOG_1_SIOS_MODE = 0x38;
     protected static final byte CONTROL_SET_INPUT_ANALOG_2_SIOS_MODE = 0x39;
-    protected static final byte CONTROL_SET_INPUT_ANALOG_1_COMPULAB_MODE = 0x3C;
-    protected static final byte CONTROL_SET_INPUT_ANALOG_2_COMPULAB_MODE = 0x3A;
+
+    protected static final byte CONTROL_SET_INPUT_DIGITAL_0_SIOS_MODE_EIGHT_BITS = 0x32;
+    protected static final byte CONTROL_SET_INPUT_DIGITAL_1_SIOS_MODE_EIGHT_BITS = 0x33;
+    protected static final byte CONTROL_SET_INPUT_DIGITAL_2_SIOS_MODE_EIGHT_BITS = 0x34;
+    protected static final byte CONTROL_SET_INPUT_DIGITAL_3_SIOS_MODE_EIGHT_BITS = 0x35;
+    protected static final byte CONTROL_SET_INPUT_DIGITAL_4_SIOS_MODE_EIGHT_BITS = 0x36;
+    protected static final byte CONTROL_SET_INPUT_DIGITAL_5_SIOS_MODE_EIGHT_BITS = 0x37;
+
+    protected static final byte CONTROL_SET_INPUT_DIGITAL_0_SIOS_MODE_TEN_BITS = 0x3A;
+    protected static final byte CONTROL_SET_INPUT_DIGITAL_1_SIOS_MODE_TEN_BITS = 0x3B;
+    protected static final byte CONTROL_SET_INPUT_DIGITAL_2_SIOS_MODE_TEN_BITS = 0x3C;
+    protected static final byte CONTROL_SET_INPUT_DIGITAL_3_SIOS_MODE_TEN_BITS = 0x3D;
+    protected static final byte CONTROL_SET_INPUT_DIGITAL_4_SIOS_MODE_TEN_BITS = 0x3E;
+    protected static final byte CONTROL_SET_INPUT_DIGITAL_5_SIOS_MODE_TEN_BITS = 0x3F;
+
+    protected static final byte CONTROL_SET_INPUT_ANALOG_1_COMPULAB_MODE_EIGHT_BITS = 0x30;
+    protected static final byte CONTROL_SET_INPUT_ANALOG_2_COMPULAB_MODE_EIGHT_BITS = 0x31;
+
     protected static final byte CONTROL_SET_MODE_SIOS = 0x00;
     protected static final byte CONTROL_SET_MODE_COMPULAB = 0x01;
     protected static final byte CONTROL_GET_NEXT_BYTE = 0x01;
@@ -121,7 +138,7 @@ public class SiosLib implements AutoCloseable {
     private SiosLabMode testSiosLab(SerialPort port) {
 
         for (byte b : TEST_DATA_SEQUENCE) {
-            port.writeBytes(new byte[] {b}, 1);
+            port.writeBytes(new byte[]{b}, 1);
         }
 
         byte[] buffer = new byte[1];
@@ -186,7 +203,7 @@ public class SiosLib implements AutoCloseable {
         try {
             sendData(data);
             result = responseFuture
-                    .completeOnTimeout(new byte[] {0}, RECEIVE_TIMEOUT, TimeUnit.MILLISECONDS)
+                    .completeOnTimeout(new byte[]{0}, RECEIVE_TIMEOUT, TimeUnit.MILLISECONDS)
                     .get();
             LOG.trace("Received: {}", () -> formatByteToString(result));
         } finally {
@@ -196,8 +213,8 @@ public class SiosLib implements AutoCloseable {
     }
 
     private void sendData(byte data) {
-        LOG.trace("Sending: {}", () -> formatByteToString(new byte[] {data}));
-        siosLabPort.writeBytes(new byte[] {data}, 1);
+        LOG.trace("Sending: {}", () -> formatByteToString(new byte[]{data}));
+        siosLabPort.writeBytes(new byte[]{data}, 1);
         waitForNextSlot();
     }
 
@@ -239,7 +256,7 @@ public class SiosLib implements AutoCloseable {
             throw new IllegalArgumentException("Analog output value must be between 0 and 255 in 8-bit mode");
         }
         byte[] bytes = ByteBuffer.allocate(4).putInt(value).array();
-        byte[] bytesToSend = new byte[] {bytes[2], bytes[3]};
+        byte[] bytesToSend = new byte[]{bytes[2], bytes[3]};
 
         LOG.trace(
                 "Setting analog output value {}: {}|{} ({})",
@@ -263,6 +280,23 @@ public class SiosLib implements AutoCloseable {
         }
     }
 
+    private boolean outputStatesAreConflicting(Set<DigitalOutputState> states) {
+        int i = 0;
+
+        boolean stateOn = false;
+        for (DigitalOutputState digitalOutputState : DigitalOutputState.values()) {
+            if (i % 2 == 0) {
+                stateOn = states.contains(digitalOutputState);
+            } else {
+                if (stateOn && states.contains(digitalOutputState)) {
+                    return true;
+                }
+            }
+            i++;
+        }
+        return false;
+    }
+
     public void changeDigitalOutputState(DigitalOutputState... state) {
 
         if (state[0] == null) {
@@ -278,21 +312,12 @@ public class SiosLib implements AutoCloseable {
 
         Set<DigitalOutputState> states = new HashSet<>(Arrays.asList(state));
 
-        int i = 0;
-
-        boolean stateOn = false;
-
-        for (DigitalOutputState digitalOutputState : DigitalOutputState.values()) {
-            if (i % 2 == 0) {
-                stateOn = states.contains(digitalOutputState);
-            } else {
-                if (stateOn && states.contains(digitalOutputState)) {
-                    throw new IllegalArgumentException(
-                            "Contradictory output states (ON and OFF for the same channel) given");
-                }
-            }
-            i++;
+        if (this.outputStatesAreConflicting(states)) {
+            throw new IllegalArgumentException(
+                    "Contradictory output states (ON and OFF for the same channel) given");
         }
+
+        int i;
 
         boolean[] newOutputState = new boolean[digitalOutputChannels];
         for (i = 0; i < digitalOutputChannels; ++i) {
@@ -350,23 +375,21 @@ public class SiosLib implements AutoCloseable {
         return result;
     }
 
-    public int getAnalogValue(AnalogInput analogInput) throws ExecutionException, InterruptedException {
+    public int getAnalogValue(AnalogInput analogInput, BitWidth bitWidth) throws ExecutionException, InterruptedException {
 
-        LOG.trace("Getting analog value {}", () -> analogInput.equals(AnalogInput.ANALOG_INPUT_1) ? "1" : "2");
+        LOG.trace("Getting analog value from {}", analogInput);
 
-        byte controlByte;
 
-        if (analogInput.equals(AnalogInput.ANALOG_INPUT_1)) {
-            controlByte = (siosLabMode == SiosLabMode.SIOS_MODE
-                    ? CONTROL_SET_INPUT_ANALOG_1_SIOS_MODE
-                    : CONTROL_SET_INPUT_ANALOG_1_COMPULAB_MODE);
-        } else {
-            controlByte = (siosLabMode == SiosLabMode.SIOS_MODE
-                    ? CONTROL_SET_INPUT_ANALOG_2_SIOS_MODE
-                    : CONTROL_SET_INPUT_ANALOG_2_COMPULAB_MODE);
+        if ((siosLabMode == SiosLabMode.COMPULAB_MODE) && (analogInput != AnalogInput.ANALOG_INPUT_1) && (analogInput != AnalogInput.ANALOG_INPUT_2)) {
+            throw new IllegalArgumentException("The digital inputs may be used for analog value retrieval in SIOSLab mode only.");
         }
 
-        byte[] newData = sendDataAndWaitForAnswer(controlByte);
+        if ((siosLabMode == SiosLabMode.COMPULAB_MODE) && (bitWidth == BitWidth.BIT_WIDTH_10_BITS)) {
+            throw new IllegalArgumentException("10-bit values can only be retrieved in SIOSLab mode.");
+        }
+
+
+        byte[] newData = sendDataAndWaitForAnswer(getAnalogInputControlByte(analogInput, bitWidth));
 
         byte[] result;
 
@@ -384,6 +407,30 @@ public class SiosLib implements AutoCloseable {
         return byteArrayToInt(result);
     }
 
+    private byte getAnalogInputControlByte(AnalogInput analogInput, BitWidth bitWidth) {
+        if (siosLabMode == SiosLabMode.COMPULAB_MODE) {
+            return analogInput == AnalogInput.ANALOG_INPUT_1 ? CONTROL_SET_INPUT_ANALOG_1_COMPULAB_MODE_EIGHT_BITS : CONTROL_SET_INPUT_ANALOG_2_COMPULAB_MODE_EIGHT_BITS;
+        }
+
+        return switch (analogInput) {
+            case ANALOG_INPUT_1 -> CONTROL_SET_INPUT_ANALOG_1_SIOS_MODE;
+            case ANALOG_INPUT_2 -> CONTROL_SET_INPUT_ANALOG_2_SIOS_MODE;
+            case DIGITAL_INPUT_0 ->
+                    bitWidth == BitWidth.BIT_WIDTH_8_BITS ? CONTROL_SET_INPUT_DIGITAL_0_SIOS_MODE_EIGHT_BITS : CONTROL_SET_INPUT_DIGITAL_0_SIOS_MODE_TEN_BITS;
+            case DIGITAL_INPUT_1 ->
+                    bitWidth == BitWidth.BIT_WIDTH_8_BITS ? CONTROL_SET_INPUT_DIGITAL_1_SIOS_MODE_EIGHT_BITS : CONTROL_SET_INPUT_DIGITAL_1_SIOS_MODE_TEN_BITS;
+            case DIGITAL_INPUT_2 ->
+                    bitWidth == BitWidth.BIT_WIDTH_8_BITS ? CONTROL_SET_INPUT_DIGITAL_2_SIOS_MODE_EIGHT_BITS : CONTROL_SET_INPUT_DIGITAL_2_SIOS_MODE_TEN_BITS;
+            case DIGITAL_INPUT_3 ->
+                    bitWidth == BitWidth.BIT_WIDTH_8_BITS ? CONTROL_SET_INPUT_DIGITAL_3_SIOS_MODE_EIGHT_BITS : CONTROL_SET_INPUT_DIGITAL_3_SIOS_MODE_TEN_BITS;
+            case DIGITAL_INPUT_4 ->
+                    bitWidth == BitWidth.BIT_WIDTH_8_BITS ? CONTROL_SET_INPUT_DIGITAL_4_SIOS_MODE_EIGHT_BITS : CONTROL_SET_INPUT_DIGITAL_4_SIOS_MODE_TEN_BITS;
+            default ->
+                    bitWidth == BitWidth.BIT_WIDTH_8_BITS ? CONTROL_SET_INPUT_DIGITAL_5_SIOS_MODE_EIGHT_BITS : CONTROL_SET_INPUT_DIGITAL_5_SIOS_MODE_TEN_BITS;
+        };
+
+    }
+
     public void setDigitalOutputState(boolean[] digitalOutputState) {
         if (digitalOutputState == null) {
             throw new IllegalArgumentException("digitalOutputState must not be null.");
@@ -392,15 +439,15 @@ public class SiosLib implements AutoCloseable {
             throw new IllegalArgumentException(
                     "digitalOutputState must have exactly 8 booleans, each representing one output channel.");
         }
-        int digitalOutputValue = 0;
+        int newDigitalOutputValue = 0;
         int bitValue = 1;
         for (int i = 0; i < 8; i++) {
             if (digitalOutputState[i]) {
-                digitalOutputValue += bitValue;
+                newDigitalOutputValue += bitValue;
             }
             bitValue *= 2;
         }
-        setDigitalOutputValue(digitalOutputValue);
+        setDigitalOutputValue(newDigitalOutputValue);
     }
 
     @Override
@@ -446,7 +493,13 @@ public class SiosLib implements AutoCloseable {
 
     public enum AnalogInput {
         ANALOG_INPUT_1,
-        ANALOG_INPUT_2
+        ANALOG_INPUT_2,
+        DIGITAL_INPUT_0,
+        DIGITAL_INPUT_1,
+        DIGITAL_INPUT_2,
+        DIGITAL_INPUT_3,
+        DIGITAL_INPUT_4,
+        DIGITAL_INPUT_5
     }
 
     public enum AnalogOutput {
