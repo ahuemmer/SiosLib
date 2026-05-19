@@ -1,9 +1,7 @@
 package com.github.ahuemmer.sioslib;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static org.awaitility.Awaitility.await;
@@ -14,18 +12,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>
  * These tests are not meant to be run automatically or assert anything but a SIOSLab connection.
  */
-@Disabled // Run these tests manually with a SIOSLab attached to the PC
+//@Disabled // Run these tests manually with a SIOSLab attached to the PC
 class SiosLibIntegrationTest {
 
     /**
      * Operating mode for the tests
      */
-    public static final SiosLib.SiosLabMode TEST_MODE = SiosLib.SiosLabMode.SIOS_MODE;
+    public static final SiosLib.SiosLabMode TEST_MODE = SiosLib.SiosLabMode.COMPULAB_MODE;
 
     /**
      * The analog input to use with the tests.
      */
-    public static final SiosLib.AnalogInput PREFERRED_ANALOG_INPUT = SiosLib.AnalogInput.DIGITAL_INPUT_4;
+    public static final SiosLib.AnalogInput PREFERRED_ANALOG_INPUT = SiosLib.AnalogInput.ANALOG_INPUT_1;
 
     /**
      * The analog output to use with the tests.
@@ -53,9 +51,8 @@ class SiosLibIntegrationTest {
             long startTime = System.currentTimeMillis();
 
             while (System.currentTimeMillis() - startTime < 60000) {
-                int newData = siosLib.getDigitalValue();
+                int newData = siosLib.getDigitalInputValue();
                 siosLib.setDigitalOutputValue(newData);
-                siosLib.waitForNextSlot();
             }
         }
     }
@@ -67,6 +64,7 @@ class SiosLibIntegrationTest {
      *
      * @throws Exception if the SIOSLab cannot be found or any other error occurs.
      */
+    //TODO: Funktioniert nicht im CompuLAB mode!
     @Test
     void reflectVoltage() throws Exception {
         try (SiosLib siosLib = new SiosLib(TEST_MODE)) {
@@ -124,7 +122,7 @@ class SiosLibIntegrationTest {
      * @throws Exception if the SIOSLab cannot be found or any other error occurs.
      */
     @Test
-    void sendAlternatingPattern() throws ExecutionException, InterruptedException {
+    void sendAlternatingPattern() {
         try (SiosLib siosLib = new SiosLib(TEST_MODE)) {
             assertTrue(siosLib.isConnected());
             for (int i = 0; i < 8; i++) {
