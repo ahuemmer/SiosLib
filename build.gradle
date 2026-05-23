@@ -33,7 +33,7 @@ repositories {
         url = 'https://repo.maven.apache.org/maven2'
     }
     maven {
-        url = 'https://maven.pkg.github.com/ahuemmer/storesthal'
+        url = 'https://maven.pkg.github.com/ahuemmer/sioslib'
         credentials {
             username = project.ghActor
             password = project.ghToken
@@ -99,7 +99,7 @@ publishing {
             if (!project.version.endsWith('-SNAPSHOT')) {
                 maven {
                     name = "GitHubPackages"
-                    url = "https://maven.pkg.github.com/ahuemmer/storesthal"
+                    url = "https://maven.pkg.github.com/ahuemmer/sioslib"
                     credentials {
                         username = project.ghActor ?: "$System.env.GH_ACTOR"
                         password = project.ghToken ?: "$System.env.GH_TOKEN"
