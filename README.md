@@ -5,7 +5,8 @@ This project gives you a Java library to easily access a
 
 ## Table of contents
 
-<!-- toc -->- __[Features](#features)__
+<!-- toc -->
+- __[Features](#features)__
 - __[Usage](#usage)__
    - __[Digital Input](#digital-input)__
    - __[Digital output](#digital-output)__
@@ -90,9 +91,8 @@ detailed list of the third-party dependencies can be found
 in [`build.gradle`](./build.gradle).
 
 Different license terms may apply to this software packages and must be considered before usage. There is no relation
-between the author(s) of SiosLib and the people or companies supplying third-party software. These packages are 
-- gratefully! - used within SiosLib, but not maintained, merchandised, licensed or anything else by 
-- SiosLibs author(s).
+between the author(s) of SiosLib and the people or companies supplying third-party software. These packages are - 
+gratefully! - used within SiosLib, but not maintained, merchandised, licensed or anything else by - SiosLibs author(s).
 
 ## Disclaimer
 
