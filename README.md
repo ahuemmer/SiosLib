@@ -5,8 +5,7 @@ This project gives you a Java library to easily access a
 
 ## Table of contents
 
-<!-- toc -->
-- __[Features](#features)__
+<!-- toc -->- __[Features](#features)__
 - __[Usage](#usage)__
    - __[Digital Input](#digital-input)__
    - __[Digital output](#digital-output)__
