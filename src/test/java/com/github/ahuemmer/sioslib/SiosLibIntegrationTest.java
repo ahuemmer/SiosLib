@@ -1,5 +1,6 @@
 package com.github.ahuemmer.sioslib;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.TimeUnit;
@@ -8,11 +9,13 @@ import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * These tests can be run when a SIOSLab is attached to the PC and some inputs can be triggered.
+ * These tests can be run when a SIOSLab is attached to the PC and some inputs can be triggered. They make use of all
+ * the individual functions offered by the SiosLib, giving you the opportunity to make sure that they are all working
+ * with your device.
  * <p>
  * These tests are not meant to be run automatically or assert anything but a SIOSLab connection.
  */
-//@Disabled // Run these tests manually with a SIOSLab attached to the PC
+@Disabled // Run these tests manually with a SIOSLab attached to the PC
 class SiosLibIntegrationTest {
 
     /**
@@ -23,17 +26,17 @@ class SiosLibIntegrationTest {
     /**
      * The analog input to use with the tests.
      */
-    public static final SiosLib.AnalogInput PREFERRED_ANALOG_INPUT = SiosLib.AnalogInput.ANALOG_INPUT_1;
+    public static final SiosLib.AnalogInput ANALOG_INPUT_TO_USE = SiosLib.AnalogInput.ANALOG_INPUT_1;
 
     /**
      * The analog output to use with the tests.
      */
-    public static final SiosLib.AnalogOutput PREFERRED_ANALOG_OUTPUT = SiosLib.AnalogOutput.ANALOG_OUTPUT_1;
+    public static final SiosLib.AnalogOutput ANALOG_OUTPUT_TO_USE = SiosLib.AnalogOutput.ANALOG_OUTPUT_1;
 
     /**
      * The analog output bitwidth to use with the tests.
      */
-    public static final SiosLib.BitWidth PREFERRED_ANALOG_OUTPUT_BITWIDTH = SiosLib.BitWidth.BIT_WIDTH_10_BITS;
+    public static final SiosLib.BitWidth ANALOG_OUTPUT_BITWIDTH_TO_USE = SiosLib.BitWidth.BIT_WIDTH_8_BITS;
 
     /**
      * Data is read from the digital input and mirrored on the digital output.
@@ -61,10 +64,13 @@ class SiosLibIntegrationTest {
      * Data is read from the analog input sets the digital output accordingly.
      * <p>
      * The higher the voltage (0..5V) on the analog input, the more LEDs on the digital output ports will be lit up.
+     * <p>
+     * For example, you can attach a trimmer potentiometer's "left" and "right" connectors to the ground and 5V outlets
+     * of the device and the central connector to the analog input. Then, turning the trimmer potentiometers adjustment
+     * wheel will cause more or less of the output leds to be lit, reflecting the voltage distribution.
      *
      * @throws Exception if the SIOSLab cannot be found or any other error occurs.
      */
-    //TODO: Funktioniert nicht im CompuLAB mode!
     @Test
     void reflectVoltage() throws Exception {
         try (SiosLib siosLib = new SiosLib(TEST_MODE)) {
@@ -75,7 +81,7 @@ class SiosLibIntegrationTest {
             int maxValuePlusOne = TEST_MODE == SiosLib.SiosLabMode.SIOS_MODE ? 1024 : 256;
 
             while (System.currentTimeMillis() - startTime < 60000) {
-                int valueIn = siosLib.getAnalogValue(PREFERRED_ANALOG_INPUT, TEST_MODE == SiosLib.SiosLabMode.SIOS_MODE ? SiosLib.BitWidth.BIT_WIDTH_10_BITS : SiosLib.BitWidth.BIT_WIDTH_8_BITS);
+                int valueIn = siosLib.getAnalogValue(ANALOG_INPUT_TO_USE, TEST_MODE == SiosLib.SiosLabMode.SIOS_MODE ? SiosLib.BitWidth.BIT_WIDTH_10_BITS : SiosLib.BitWidth.BIT_WIDTH_8_BITS);
 
                 int valueOut = 0;
                 int factor = 1;
@@ -95,11 +101,9 @@ class SiosLibIntegrationTest {
     /**
      * Sends an "up and down" pattern to the digital output, turning the first LED on, turning it off again and
      * turning the second one on and so on - and backwards once the eight LED was lit.
-     *
-     * @throws Exception if the SIOSLab cannot be found or any other error occurs.
      */
     @Test
-    void sendUpAndDownPattern() throws Exception {
+    void sendUpAndDownPattern() {
         try (SiosLib siosLib = new SiosLib(TEST_MODE)) {
             assertTrue(siosLib.isConnected());
             int data = 1;
@@ -118,8 +122,6 @@ class SiosLibIntegrationTest {
     /**
      * Sends a pattern to the digital output that makes every second LED (0,2,4,6) light and then switch over to the
      * other ones (1,3,5,7). This is repeated eight times.
-     *
-     * @throws Exception if the SIOSLab cannot be found or any other error occurs.
      */
     @Test
     void sendAlternatingPattern() {
@@ -198,13 +200,26 @@ class SiosLibIntegrationTest {
         }
     }
 
+    /**
+     * Steadily increases the value (--> voltage) on the analog output and also increasingly lights more of the digital
+     * output LEDs respectively. When the output value reaches its maximum, the output voltage should be coarsely at
+     * ~5V. All the digital output LEDs will be lit then.
+     * <p>
+     * This is possible in SIOS mode only.
+     * <p>
+     * For a more exact display of the output voltage, connect a multimeter to pin 13 (-) and 25 (+; analog output 1) or
+     * 26 (+; analog output 2).
+     * <p>
+     * Please note, that unless in some of the other tests, the digital output does not show anything <i>measured</i>
+     * here, but should give a rough estimation of what the output voltage should be in steps between 0V and ~5V.
+     */
     @Test
     void setAnalogOutputValue() {
-        try (SiosLib siosLib = new SiosLib(TEST_MODE)) {
+        try (SiosLib siosLib = new SiosLib(SiosLib.SiosLabMode.SIOS_MODE)) { // not supported in CompuLAB mode!
             assertTrue(siosLib.isConnected());
 
-            int maxValue = PREFERRED_ANALOG_OUTPUT_BITWIDTH.equals(SiosLib.BitWidth.BIT_WIDTH_10_BITS) ? 1024 : 256;
-            int mutiplicator = PREFERRED_ANALOG_OUTPUT_BITWIDTH.equals(SiosLib.BitWidth.BIT_WIDTH_10_BITS) ? 16 : 4;
+            int maxValue = ANALOG_OUTPUT_BITWIDTH_TO_USE.equals(SiosLib.BitWidth.BIT_WIDTH_10_BITS) ? 1024 : 256;
+            int mutiplicator = ANALOG_OUTPUT_BITWIDTH_TO_USE.equals(SiosLib.BitWidth.BIT_WIDTH_10_BITS) ? 16 : 4;
 
             int factor = 1;
             int value = 0;
@@ -213,7 +228,7 @@ class SiosLibIntegrationTest {
                     value = maxValue - 1;
                     factor = -1;
                 }
-                siosLib.setAnalogOutputValue(PREFERRED_ANALOG_OUTPUT, PREFERRED_ANALOG_OUTPUT_BITWIDTH, value);
+                siosLib.setAnalogOutputValue(ANALOG_OUTPUT_TO_USE, ANALOG_OUTPUT_BITWIDTH_TO_USE, value);
                 int factorDigital = 1;
                 int valueDigital = 0;
                 for (int i = 0; i <= 7; i++) {
@@ -227,14 +242,23 @@ class SiosLibIntegrationTest {
                 pause();
                 value += (factor * mutiplicator);
             }
-            siosLib.setAnalogOutputValue(PREFERRED_ANALOG_OUTPUT, PREFERRED_ANALOG_OUTPUT_BITWIDTH, 0);
+            siosLib.setAnalogOutputValue(ANALOG_OUTPUT_TO_USE, ANALOG_OUTPUT_BITWIDTH_TO_USE, 0);
         }
     }
 
+    /**
+     * Wait 250ms before going on.
+     */
     private void pause() {
         await().pollDelay(250, TimeUnit.MILLISECONDS).untilAsserted(() -> assertTrue(true));
     }
 
+    /**
+     * Sends data to the device and waits for 250ms then.
+     *
+     * @param siosLib The SiosLib instance with the device connected.
+     * @param data    The data to send.
+     */
     private void sendAndWait(SiosLib siosLib, int data) {
         siosLib.setDigitalOutputValue(data);
         pause();

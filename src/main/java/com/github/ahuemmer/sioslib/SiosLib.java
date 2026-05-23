@@ -185,13 +185,13 @@ public class SiosLib implements AutoCloseable {
      * The "command" byte to retrieve an 8-byte analog value from the first analog input in
      * {@link com.github.ahuemmer.sioslib.SiosLib.SiosLabMode#COMPULAB_MODE}.
      */
-    protected static final byte CONTROL_SET_INPUT_ANALOG_1_COMPULAB_MODE_EIGHT_BITS = 0x30;
+    protected static final byte CONTROL_SET_INPUT_ANALOG_1_COMPULAB_MODE_EIGHT_BITS = 0x3C;
 
     /**
      * The "command" byte to retrieve an 8-byte analog value from the second analog input in
      * {@link com.github.ahuemmer.sioslib.SiosLib.SiosLabMode#COMPULAB_MODE}.
      */
-    protected static final byte CONTROL_SET_INPUT_ANALOG_2_COMPULAB_MODE_EIGHT_BITS = 0x31;
+    protected static final byte CONTROL_SET_INPUT_ANALOG_2_COMPULAB_MODE_EIGHT_BITS = 0x3A;
 
     /**
      * Command byte for choosing {@link com.github.ahuemmer.sioslib.SiosLib.SiosLabMode#SIOS_MODE} during the

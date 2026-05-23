@@ -1,0 +1,46 @@
+name: Java CI with Gradle
+
+on:
+  push:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+    - name: Set up JDK 21
+      uses: actions/setup-java@v5
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: gradle
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+    - name: Test with Gradle
+      run: ./gradlew -si test
+    - name: Update README.md's TOC (if necessary)
+      run: ./gradlew -si insertTocs
+    - name: Commit and push updated TOC (if necessary)
+      run: |
+        git config user.name "GitHub Actions Bot"
+        git config user.email "<>"
+
+        #Commit only if there are changes:
+        (git diff --quiet && git diff --staged --quiet) \
+          || (git commit -am "docs: update TOC" && git push origin develop)
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version: 24
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Install semantic-release plugins
+      run: npm install -g semantic-release @semantic-release/changelog @semantic-release/commit-analyzer @semantic-release/exec semantic-release/git semantic-release/release-notes-generator
+    - name: Publish and release
+      run: chmod +x ./prepare_release.sh && npx semantic-release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
