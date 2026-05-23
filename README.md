@@ -11,6 +11,7 @@ This project gives you a Java library to easily access a
    - __[Digital output](#digital-output)__
    - __[Analog output](#analog-output)__
    - __[Analog input](#analog-input)__
+- __[docs folder](#docs-folder)__
 - __[Third-Party software](#third-party-software)__
 - __[Disclaimer](#disclaimer)__
 - __[License](#license)__
@@ -82,6 +83,11 @@ and their changes. Also, the maximum output voltage must not be exactly 5V (on m
 Reading the value of an analog input can be done via `getAnalogValue`. As with `setAnalogOutputValue`, there's a rather
 coarse relation between the voltage applied to the input and the value retrieved. In 10 bit mode (applicable to a 
 SIOSLAB device only, not to a CompuLab), the values may range from `0` to `1024`, in 8 bit mode from `0` to `255`.
+
+## `docs` folder
+
+The content's of the [`docs`](docs) folder were not created by the author(s) of SiosLib. Please see the
+[README](docs/README.md) there for further information.
 
 ## Third-Party software
 
