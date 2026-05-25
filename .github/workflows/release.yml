@@ -53,7 +53,7 @@ jobs:
 
         #Commit only if there are changes:
         (git diff --quiet && git diff --staged --quiet) \
-          || (git commit -am "docs: update TOC" && git push origin develop)
+          || (git commit -am "docs: update TOC" && git push origin ${{ github.ref_name }})
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -101,6 +101,7 @@ jobs:
         npm install --save-dev \
           semantic-release \
           @semantic-release/commit-analyzer \
+          @semantic-release/exec \
           @semantic-release/release-notes-generator \
           @semantic-release/changelog \
           @semantic-release/github \
