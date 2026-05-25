@@ -41,7 +41,7 @@ jobs:
       run: chmod +x gradlew
 
     - name: Grant execute permission for prepare_release
-      run: chmod +x prepare_release
+      run: chmod +x prepare_release.sh
 
     - name: Update README.md's TOC (if necessary)
       run: ./gradlew -si insertTocs
