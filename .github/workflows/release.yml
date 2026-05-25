@@ -43,19 +43,8 @@ jobs:
     #- name: Grant execute permission for prepare_release
     #  run: chmod +x prepare_release
 
-    - name: Build with Gradle
-      run: ./gradlew -si build
-
     - name: Update README.md's TOC (if necessary)
       run: ./gradlew -si insertTocs
-
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v7
-      with:
-        name: build-artifacts
-        path: |
-          **/build/libs/*.jar
-        retention-days: 1  # Nur temporär, bis Release erstellt wurde
 
     - name: Commit and push updated TOC (if necessary)
       run: |
@@ -67,6 +56,17 @@ jobs:
           || (git commit -am "docs: update TOC" && git push origin develop)
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build with Gradle
+      run: ./gradlew -si build
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v7
+      with:
+        name: build-artifacts
+        path: |
+          **/build/libs/*.jar
+        retention-days: 1  # Nur temporär, bis Release erstellt wurde
 
   release:
     runs-on: ubuntu-latest
