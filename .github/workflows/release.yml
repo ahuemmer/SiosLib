@@ -28,14 +28,14 @@ jobs:
         cache: gradle
 
     - name: Restore Gradle cache
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+      uses: actions/cache@v5
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
@@ -50,12 +50,12 @@ jobs:
       run: ./gradlew -si insertTocs
 
     - name: Upload build artifacts
-        uses: actions/upload-artifact@v7
-        with:
-          name: build-artifacts
-          path: |
-            **/build/libs/*.jar
-          retention-days: 1  # Nur temporär, bis Release erstellt wurde
+      uses: actions/upload-artifact@v7
+      with:
+        name: build-artifacts
+        path: |
+          **/build/libs/*.jar
+        retention-days: 1  # Nur temporär, bis Release erstellt wurde
 
     - name: Commit and push updated TOC (if necessary)
       run: |
