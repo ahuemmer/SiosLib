@@ -99,8 +99,8 @@ publishing {
                     name = "GitHubPackages"
                     url = "https://maven.pkg.github.com/ahuemmer/sioslib"
                     credentials {
-                        username = project.ghActor ?: "$System.env.GH_ACTOR"
-                        password = project.ghToken ?: "$System.env.GH_TOKEN"
+                        username = project.ghActor ?: "$System.env.GITHUB_TOKEN"
+                        password = project.ghToken ?: "$System.env.GITHUB_ACTOR"
                     }
                 }
             }
