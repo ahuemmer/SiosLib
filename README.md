@@ -8,10 +8,10 @@ This project gives you a Java library to easily access a
 <!-- toc -->
 - __[Features](#features)__
 - __[Usage](#usage)__
-   - __[Digital Input](#digital-input)__
+   - __[Digital input](#digital-input)__
    - __[Digital output](#digital-output)__
-   - __[Analog output](#analog-output)__
    - __[Analog input](#analog-input)__
+   - __[Analog output](#analog-output)__
 - __[docs folder](#docs-folder)__
 - __[Third-Party software](#third-party-software)__
 - __[Disclaimer](#disclaimer)__
