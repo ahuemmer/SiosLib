@@ -5,7 +5,8 @@ This project gives you a Java library to easily access a
 
 ## Table of contents
 
-<!-- toc -->- __[Features](#features)__
+<!-- toc -->
+- __[Features](#features)__
 - __[Usage](#usage)__
    - __[Digital Input](#digital-input)__
    - __[Digital output](#digital-output)__
@@ -48,7 +49,7 @@ Constructed like this, SiosLib will scan all the serial ports of the PC (includi
 try to connect a SIOSLAB attached to it. You can then use the functions of the `siosLib` object as described in their
 JavaDoc respectively.
 
-### Digital Input
+### Digital input
 
 Using `getDigitalInputValue` retrieves the combined value of the eight digital input ports. The highest bit (input 
 number 7) will count as `127` and the lowest bit (input number 0) as `1`. Thus, the value can range from `0` (no input
@@ -68,6 +69,12 @@ any combination of `DigitalOutputState` enum contents.
 
 To retrieve the digital last output value set, use `getDigitalOutputValue`.
 
+### Analog input
+
+Reading the value of an analog input can be done via `getAnalogValue`. As with `setAnalogOutputValue`, there's a rather
+coarse relation between the voltage applied to the input and the value retrieved. In 10 bit mode (applicable to a
+SIOSLAB device only, not to a CompuLab), the values may range from `0` to `1024`, in 8 bit mode from `0` to `255`.
+
 ### Analog output
 
 You can (coarsely) control the voltage applied to the analog outputs by `setAnalogOutputValue`. This is possible in
@@ -77,12 +84,6 @@ is less fine-grained, as the values may range from `0` (=0V output) to `255` (=~
 
 Though the values possible suggest it, please note, that the output voltage does not always exactly reflect these values
 and their changes. Also, the maximum output voltage must not be exactly 5V (on my test device it was about 4.8V).
-
-### Analog input
-
-Reading the value of an analog input can be done via `getAnalogValue`. As with `setAnalogOutputValue`, there's a rather
-coarse relation between the voltage applied to the input and the value retrieved. In 10 bit mode (applicable to a 
-SIOSLAB device only, not to a CompuLab), the values may range from `0` to `1024`, in 8 bit mode from `0` to `255`.
 
 ## `docs` folder
 

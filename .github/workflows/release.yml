@@ -4,25 +4,6 @@ on:
   push:
     branches: [ main, develop ]
 
-permissions:
-  actions: read
-  artifact-metadata: write
-  attestations: write
-  checks: read
-  code-quality: write
-  contents: read
-  deployments: none
-  id-token: none
-  issues: write
-  models: read
-  discussions: none
-  packages: write
-  pages: write
-  pull-requests: write
-  security-events: none
-  statuses: write
-  vulnerability-alerts: read
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -45,6 +26,9 @@ jobs:
     - name: Update README.md's TOC (if necessary)
       run: ./gradlew -si insertTocs
     - name: Commit and push updated TOC (if necessary)
+      permissions:
+        contents: write # to be able to publish a GitHub release
+        pull-requests: write # to be able to comment on released pull requests
       run: |
         git config user.name "GitHub Actions Bot"
         git config user.email "<>"
@@ -63,6 +47,11 @@ jobs:
     - name: Install semantic-release plugins
       run: npm install -g semantic-release @semantic-release/changelog @semantic-release/commit-analyzer @semantic-release/exec semantic-release/git semantic-release/release-notes-generator
     - name: Publish and release
+      permissions:
+        contents: write # to be able to publish a GitHub release
+        issues: write # to be able to comment on released issues
+        pull-requests: write # to be able to comment on released pull requests
+        id-token: write # to enable use of OIDC for trusted publishing and npm provenance
       run: chmod +x ./prepare_release.sh && npx semantic-release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
