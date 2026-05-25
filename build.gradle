@@ -33,7 +33,7 @@ repositories {
         url = 'https://repo.maven.apache.org/maven2'
     }
     maven {
-        url = 'https://maven.pkg.github.com/ahuemmer/storesthal'
+        url = 'https://maven.pkg.github.com/ahuemmer/sioslib'
         credentials {
             username = project.ghActor
             password = project.ghToken
@@ -67,8 +67,6 @@ dependencies {
     testImplementation(platform(group: 'org.junit', name: 'junit-bom', version: '6.0.3'))
     testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter'
     testImplementation group: 'org.awaitility', name: 'awaitility', version: '4.3.0'
-    /*testImplementation group: 'org.mockito', name: 'mockito-core', version: '5.23.0'
-    testImplementation group: 'org.mockito', name: 'mockito-inline', version: '5.23.0'*/
     testImplementation group: 'org.mockito', name: 'mockito-junit-jupiter', version: '5.23.0'
     testRuntimeOnly group: 'org.junit.platform', name: 'junit-platform-launcher'
 }
@@ -99,10 +97,10 @@ publishing {
             if (!project.version.endsWith('-SNAPSHOT')) {
                 maven {
                     name = "GitHubPackages"
-                    url = "https://maven.pkg.github.com/ahuemmer/storesthal"
+                    url = "https://maven.pkg.github.com/ahuemmer/sioslib"
                     credentials {
-                        username = project.ghActor ?: "$System.env.GH_ACTOR"
-                        password = project.ghToken ?: "$System.env.GH_TOKEN"
+                        username = project.ghActor ?: "$System.env.GITHUB_TOKEN"
+                        password = project.ghToken ?: "$System.env.GITHUB_ACTOR"
                     }
                 }
             }

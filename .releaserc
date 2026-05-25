@@ -3,7 +3,7 @@
        {name: "main"},
        {name: "develop", prerelease: true},
      ],
-     "repositoryUrl": "https://github.com/ahuemmer/storesthal",
+     "repositoryUrl": "https://github.com/ahuemmer/sioslib",
      "debug": "true",
      "plugins": [
         "@semantic-release/commit-analyzer",

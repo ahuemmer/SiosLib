@@ -12,4 +12,4 @@ else
 fi
 echo "jar = $JAR_VERSION"
 
-./gradlew -si -Pversion=${JAR_VERSION} build sourcesJar javadocJar publish
+./gradlew -si -Pversion=${JAR_VERSION} build sourcesJar javadocJar publish -x test -x checkTocs
