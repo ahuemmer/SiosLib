@@ -826,7 +826,7 @@ public class SiosLib implements AutoCloseable {
     }
 
     /**
-     * Convenience function to set the digital output state via an array of eight booleans.
+     * Convenience function to set the digital output state via an array of eight (primitive) booleans.
      *
      * @param digitalOutputState The desired new digital output state. The first array entry denotes the first digital
      *                           output and so on.
@@ -848,6 +848,35 @@ public class SiosLib implements AutoCloseable {
             bitValue *= 2;
         }
         setDigitalOutputValue(newDigitalOutputValue);
+    }
+
+    /**
+     * Convenience function to set the digital output state via an array of eight Booleans.
+     *
+     * @param digitalOutputState The desired new digital output state. The first array entry denotes the first digital
+     *                           output and so on.
+     */
+    public void setDigitalOutputState(Boolean[] digitalOutputState) {
+        if (digitalOutputState == null) {
+            throw new IllegalArgumentException("digitalOutputState must not be null.");
+        }
+        if (digitalOutputState.length != 8) {
+            throw new IllegalArgumentException(
+                    "digitalOutputState must have exactly 8 Booleans, each representing one output channel.");
+        }
+        int newDigitalOutputValue = 0;
+        int bitValue = 1;
+        for (int i = 0; i < 8; i++) {
+            if (Boolean.TRUE.equals(digitalOutputState[i])) {
+                newDigitalOutputValue += bitValue;
+            }
+            bitValue *= 2;
+        }
+        setDigitalOutputValue(newDigitalOutputValue);
+    }
+
+    public String getSerialPortName() {
+        return siosLabPort.getDescriptivePortName();
     }
 
     /**

@@ -5,8 +5,7 @@ This project gives you a Java library to easily access a
 
 ## Table of contents
 
-<!-- toc -->
-- __[Features](#features)__
+<!-- toc -->- __[Features](#features)__
 - __[Usage](#usage)__
    - __[Digital input](#digital-input)__
    - __[Digital output](#digital-output)__
@@ -61,8 +60,8 @@ Call `setDigitalOutputValue` with a value between `0` and `255` to set the digit
 the same that applies to `getDigitalInputValue`, thus, the highest output port (number 7) will be addressed by `128`,
 the lowest one by `1` and any combination by the sum of their individual values.
 
-`setDigitalOutputState` takes an array of eight booleans and sets the state of the eight digital output ports
-accordingly.
+`setDigitalOutputState` takes an array of eight **b**ooleans or **B**ooleans and sets the state of the eight digital
+output ports accordingly.
 
 Using `changeDigitalOutputState` gives you a more convenient control of the individual output ports, as you can request
 any combination of `DigitalOutputState` enum contents.
