@@ -502,8 +502,8 @@ class SiosLibTest {
     }
 
     @Nested
-    @DisplayName("changeDigitalOutputState with boolean array")
-    class SetDigitalOutputStateWithBooleanArray {
+    @DisplayName("changeDigitalOutputState with primitive boolean array")
+    class SetDigitalOutputStateWithPrimitiveBooleanArray {
 
         @ParameterizedTest
         @DisplayName("sets output state")
@@ -579,6 +579,98 @@ class SiosLibTest {
                 clearInvocations(serialPort);
 
                 assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(new boolean[] {true}));
+                assertThrows(
+                        IllegalArgumentException.class,
+                        () -> siosLib.setDigitalOutputState(
+                                new boolean[] {true, true, true, true, true, true, true, true, true}));
+
+                byte[] controlData = new byte[] {
+                    mode == SIOS_MODE ? CONTROL_SET_DIGITAL_OUTPUT_SIOS_MODE : CONTROL_SET_DIGITAL_OUTPUT_COMPULAB_MODE
+                };
+
+                verify(serialPort, times(0)).writeBytes(controlData, controlData.length);
+            }
+        }
+    }
+
+    @Nested
+    @DisplayName("changeDigitalOutputState with Boolean array")
+    class SetDigitalOutputStateWithBooleanArray {
+
+        @ParameterizedTest
+        @DisplayName("sets output state")
+        @EnumSource(SiosLib.SiosLabMode.class)
+        void sets_output_state(SiosLib.SiosLabMode mode) {
+            try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
+
+                prepareSerialPortMock();
+
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
+
+                SiosLib siosLib = new SiosLib(mode);
+
+                clearInvocations(serialPort);
+
+                siosLib.setDigitalOutputState(new Boolean[] {true, false, true, false, true, false, true, false});
+
+                byte[] controlData = new byte[] {
+                    mode == SIOS_MODE ? CONTROL_SET_DIGITAL_OUTPUT_SIOS_MODE : CONTROL_SET_DIGITAL_OUTPUT_COMPULAB_MODE
+                };
+
+                verify(serialPort, times(1)).writeBytes(controlData, controlData.length);
+                verify(serialPort, times(1)).writeBytes(new byte[] {85}, 1);
+                assertEquals(85, siosLib.getDigitalOutputValue());
+            }
+        }
+
+        @ParameterizedTest
+        @DisplayName("throws IllegalArgumentException if outputstate is null")
+        @EnumSource(SiosLib.SiosLabMode.class)
+        void throws_IllegalArgumentException_if_outputstate_is_null(SiosLib.SiosLabMode mode) {
+            try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
+
+                prepareSerialPortMock();
+
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
+
+                SiosLib siosLib = new SiosLib(SIOS_MODE);
+
+                clearInvocations(serialPort);
+
+                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState((Boolean[]) null));
+
+                byte[] controlData = new byte[] {
+                    mode == SIOS_MODE ? CONTROL_SET_DIGITAL_OUTPUT_SIOS_MODE : CONTROL_SET_DIGITAL_OUTPUT_COMPULAB_MODE
+                };
+
+                verify(serialPort, times(0)).writeBytes(controlData, controlData.length);
+            }
+        }
+
+        @ParameterizedTest
+        @DisplayName("throws IllegalArgumentException if outputstate does not have exactly eight bits")
+        @EnumSource(SiosLib.SiosLabMode.class)
+        void throws_IllegalArgumentException_if_outputstate_does_not_have_exactly_eight_bits(SiosLib.SiosLabMode mode) {
+            try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
+
+                prepareSerialPortMock();
+
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
+
+                SiosLib siosLib = new SiosLib(SIOS_MODE);
+
+                clearInvocations(serialPort);
+
+                assertThrows(IllegalArgumentException.class, () -> siosLib.setDigitalOutputState(new Boolean[] {true}));
                 assertThrows(
                         IllegalArgumentException.class,
                         () -> siosLib.setDigitalOutputState(
@@ -1107,6 +1199,29 @@ class SiosLibTest {
         }
     }
 
+    @Nested
+    @DisplayName("getSerialPortName")
+    class GetSerialPortName {
+
+        @Test
+        @DisplayName("returns the serial port name")
+        void returns_the_serial_port_name() {
+            try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
+
+                prepareSerialPortMock();
+
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
+
+                SiosLib siosLib = new SiosLib(SIOS_MODE);
+
+                assertEquals("COM123", siosLib.getSerialPortName());
+            }
+        }
+    }
+
     private void prepareSerialPortMock() {
         when(serialPort.getSystemPortName()).thenReturn("Serial Port 123");
         when(serialPort.getDescriptivePortName()).thenReturn("COM123");
@@ -1121,8 +1236,4 @@ class SiosLibTest {
                 .when(serialPort)
                 .readBytes(any(byte[].class), eq(1));
     }
-
-    // TODO:
-    // 1. Code prüfen und ggf. verbessern, auch mit SonarQube etc.
-    // 2. Doku etc. für GitHub ergänzen.
 }

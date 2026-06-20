@@ -168,6 +168,35 @@ class SiosLibIntegrationTest {
 
     /**
      * Sends a pattern to the digital output that makes the outer LEDs start lighting and then continues to the center
+     * LEDs. This is repeated eight times.
+     */
+    @Test
+    void sendReverseNarrowingPattern() {
+        try (SiosLib siosLib = new SiosLib(TEST_MODE)) {
+            for (int i = 0; i < 8; i++) {
+                assertTrue(siosLib.isConnected());
+                siosLib.setDigitalOutputState(new Boolean[] {true, true, true, true, true, true, true, true});
+                pause();
+                siosLib.setDigitalOutputState(new Boolean[] {true, true, true, false, false, true, true, true});
+                pause();
+                siosLib.setDigitalOutputState(new Boolean[] {true, true, false, false, false, false, true, true});
+                pause();
+                siosLib.setDigitalOutputState(new Boolean[] {true, false, false, false, false, false, false, true});
+                pause();
+                siosLib.setDigitalOutputState(new Boolean[] {false, false, false, false, false, false, false, false});
+                pause();
+                siosLib.setDigitalOutputState(new Boolean[] {true, false, false, false, false, false, false, true});
+                pause();
+                siosLib.setDigitalOutputState(new Boolean[] {true, true, false, false, false, false, true, true});
+                pause();
+                siosLib.setDigitalOutputState(new Boolean[] {true, true, true, false, false, true, true, true});
+                pause();
+            }
+        }
+    }
+
+    /**
+     * Sends a pattern to the digital output that makes the outer LEDs start lighting and then continues to the center
      * LEDs. Then the LEDs are switched off again, beginning with the outer LEDs. This is repeated eight times.
      */
     @Test
