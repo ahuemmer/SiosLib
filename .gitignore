@@ -9,3 +9,7 @@ build
 *.iml
 secrets.gradle
 /publishing.md
+
+# SemRel
+package.json
+package-lock.json
