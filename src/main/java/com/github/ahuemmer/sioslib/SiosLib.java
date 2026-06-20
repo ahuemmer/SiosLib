@@ -12,7 +12,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jspecify.annotations.Nullable;
 
 /**
  * Library for accessing the standard input and output functions of the
@@ -425,7 +424,6 @@ public class SiosLib implements AutoCloseable {
      * @param port The serial port to check for a SIOSLAB / COMPULAB connection.
      * @return The mode of the device found (if any).
      */
-    @Nullable
     private SiosLabMode testSiosLab(SerialPort port) {
 
         for (byte b : TEST_DATA_SEQUENCE) {
