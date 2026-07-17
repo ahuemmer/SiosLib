@@ -10,6 +10,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -261,6 +262,11 @@ public class SiosLib implements AutoCloseable {
     private int digitalOutputValue;
 
     /**
+     * Lock to assure parallel calls won't interfere
+     */
+    private final ReentrantLock lock = new ReentrantLock();
+
+    /**
      * The 16 possible states (each: on or off) of the 8 digital outputs.
      */
     public enum DigitalOutputState {
@@ -382,6 +388,8 @@ public class SiosLib implements AutoCloseable {
      */
     public void switchMode(SiosLabMode newMode) {
 
+        lock.lock();
+
         if (siosLabMode == newMode) {
             LOG.info(
                     "Switching to {} mode was requested, but this is the currect operating mode already. "
@@ -412,6 +420,8 @@ public class SiosLib implements AutoCloseable {
         sendData(newMode == SiosLabMode.COMPULAB_MODE ? CONTROL_SET_MODE_COMPULAB : CONTROL_SET_MODE_SIOS);
 
         siosLabMode = newMode;
+
+        lock.unlock();
 
         setDigitalOutputValue(0);
 
@@ -518,10 +528,12 @@ public class SiosLib implements AutoCloseable {
      * @throws InterruptedException if waiting for the data was interrupted.
      */
     public int getDigitalInputValue() throws ExecutionException, InterruptedException {
+        lock.lock();
         byte[] result = sendDataAndWaitForAnswer(
                 siosLabMode == SiosLabMode.SIOS_MODE
                         ? CONTROL_SET_INPUT_DIGITAL_SIOS_MODE
                         : CONTROL_SET_INPUT_DIGITAL_COMPULAB_MODE);
+        lock.unlock();
         return byteArrayToInt(result);
     }
 
@@ -537,6 +549,8 @@ public class SiosLib implements AutoCloseable {
             throw new IllegalArgumentException("Cannot set a digital output value less than 0 or more than 255");
         }
 
+        lock.lock();
+
         byte byteToSend = (byte) value;
         LOG.trace("Setting digital output value: {}", byteToSend);
         sendData(
@@ -544,6 +558,9 @@ public class SiosLib implements AutoCloseable {
                         ? CONTROL_SET_DIGITAL_OUTPUT_SIOS_MODE
                         : CONTROL_SET_DIGITAL_OUTPUT_COMPULAB_MODE);
         sendData(byteToSend);
+
+        lock.unlock();
+
         LOG.trace("Finished setting digital output value.");
         this.digitalOutputValue = value;
     }
@@ -580,7 +597,6 @@ public class SiosLib implements AutoCloseable {
         if (this.siosLabMode != SiosLabMode.SIOS_MODE) {
             throw new IllegalStateException("Analog output can only be used in SIOS mode.");
         }
-
         if ((bitWidth.equals(BitWidth.BIT_WIDTH_10_BITS)) && ((value < 0) || (value > 1023))) {
             throw new IllegalArgumentException("Analog output value must be between 0 and 1023 in 10-bit mode");
         }
@@ -596,6 +612,7 @@ public class SiosLib implements AutoCloseable {
                 bytesToSend[1],
                 bytesToSend[0],
                 value);
+        lock.lock();
         if (bitWidth.equals(BitWidth.BIT_WIDTH_10_BITS)) {
             sendData(
                     analogOutput.equals(AnalogOutput.ANALOG_OUTPUT_1)
@@ -610,6 +627,7 @@ public class SiosLib implements AutoCloseable {
                             : CONTROL_SET_ANALOG_OUTPUT_2_EIGHT_BITS_SIOS_MODE);
             sendData(bytesToSend[1]);
         }
+        lock.unlock();
     }
 
     /**
@@ -760,16 +778,20 @@ public class SiosLib implements AutoCloseable {
             throw new IllegalArgumentException("10-bit values can only be retrieved in SIOSLab mode.");
         }
 
+        lock.lock();
+
         byte[] newData = sendDataAndWaitForAnswer(getAnalogInputCommandByte(analogInput, bitWidth));
 
         byte[] result;
 
         if (siosLabMode == SiosLabMode.SIOS_MODE) {
             byte[] additionalData = sendDataAndWaitForAnswer(CONTROL_GET_NEXT_BYTE);
+            lock.unlock();
             result = new byte[newData.length + additionalData.length];
             System.arraycopy(additionalData, 0, result, 0, additionalData.length);
             System.arraycopy(newData, 0, result, additionalData.length, newData.length);
         } else {
+            lock.unlock();
             result = newData;
         }
 
