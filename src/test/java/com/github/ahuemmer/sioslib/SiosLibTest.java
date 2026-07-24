@@ -39,11 +39,21 @@ import static org.mockito.Mockito.when;
 import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.time.Duration;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiConsumer;
 import java.util.stream.Stream;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.Appender;
+import org.apache.logging.log4j.core.Logger;
+import org.apache.logging.log4j.core.appender.OutputStreamAppender;
+import org.apache.logging.log4j.core.config.Configuration;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -1127,6 +1137,363 @@ class SiosLibTest {
                     Arguments.of(SiosLib.AnalogOutput.ANALOG_OUTPUT_1, SiosLib.BitWidth.BIT_WIDTH_10_BITS),
                     Arguments.of(SiosLib.AnalogOutput.ANALOG_OUTPUT_2, SiosLib.BitWidth.BIT_WIDTH_8_BITS),
                     Arguments.of(SiosLib.AnalogOutput.ANALOG_OUTPUT_2, SiosLib.BitWidth.BIT_WIDTH_10_BITS));
+        }
+    }
+
+    @Nested
+    @DisplayName("Change listener handling")
+    class ChangeListenerHandling {
+
+        @Test
+        @DisplayName("initially has no change listeners defined")
+        void initially_has_no_change_listeners_defined() {
+            try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
+                prepareSerialPortMock();
+
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
+
+                try (SiosLib siosLib = new SiosLib(SIOS_MODE); ) {
+                    assertTrue(siosLib.getAnalogInputChangeListeners().isEmpty());
+                    assertTrue(siosLib.getDigitalInputChangeListeners().isEmpty());
+                }
+            }
+        }
+
+        @Test
+        @DisplayName("change listeners are added and removed correctly")
+        void change_listeners_are_added_and_removed_correctly() {
+
+            BiConsumer<Integer, Integer> digitalChangeListener1 = (oldValue, newValue) -> {
+                System.out.println(oldValue + " -> " + newValue);
+            };
+            BiConsumer<Integer, Integer> digitalChangeListener2 = (oldValue, newValue) -> {
+                System.out.println(oldValue + " became " + newValue);
+            };
+
+            BiConsumer<Integer, Integer> analogInputChangeListener1 = (oldValue, newValue) -> {
+                System.out.println("Analog: " + oldValue + " -> " + newValue);
+            };
+            BiConsumer<Integer, Integer> analogInputChangeListener2 = (oldValue, newValue) -> {
+                System.out.println("Analog: " + oldValue + " became " + newValue);
+            };
+            BiConsumer<Integer, Integer> analogInputChangeListener3 = (oldValue, newValue) -> {
+                System.out.println("Analog: " + oldValue + " got " + newValue);
+            };
+
+            try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
+                prepareSerialPortMock();
+
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
+
+                try (SiosLib siosLib = new SiosLib(SIOS_MODE); ) {
+                    siosLib.addDigitalInputChangeListener(digitalChangeListener1);
+                    siosLib.addDigitalInputChangeListener(digitalChangeListener2);
+                    siosLib.addAnalogInputChangeListener(
+                            SiosLib.AnalogInput.ANALOG_INPUT_2,
+                            SiosLib.BitWidth.BIT_WIDTH_10_BITS,
+                            analogInputChangeListener1);
+                    siosLib.addAnalogInputChangeListener(
+                            SiosLib.AnalogInput.ANALOG_INPUT_2,
+                            SiosLib.BitWidth.BIT_WIDTH_8_BITS,
+                            analogInputChangeListener2);
+                    siosLib.addAnalogInputChangeListener(
+                            SiosLib.AnalogInput.ANALOG_INPUT_2,
+                            SiosLib.BitWidth.BIT_WIDTH_8_BITS,
+                            analogInputChangeListener3);
+
+                    assertEquals(2, siosLib.getDigitalInputChangeListeners().size());
+
+                    assertEquals(
+                            digitalChangeListener1,
+                            siosLib.getDigitalInputChangeListeners().get(0));
+                    assertEquals(
+                            digitalChangeListener2,
+                            siosLib.getDigitalInputChangeListeners().get(1));
+
+                    assertEquals(1, siosLib.getAnalogInputChangeListeners().size());
+                    assertEquals(
+                            2,
+                            siosLib.getAnalogInputChangeListeners()
+                                    .get(SiosLib.AnalogInput.ANALOG_INPUT_2)
+                                    .size());
+                    assertEquals(
+                            1,
+                            siosLib.getAnalogInputChangeListeners()
+                                    .get(SiosLib.AnalogInput.ANALOG_INPUT_2)
+                                    .get(SiosLib.BitWidth.BIT_WIDTH_10_BITS)
+                                    .size());
+                    assertEquals(
+                            2,
+                            siosLib.getAnalogInputChangeListeners()
+                                    .get(SiosLib.AnalogInput.ANALOG_INPUT_2)
+                                    .get(SiosLib.BitWidth.BIT_WIDTH_8_BITS)
+                                    .size());
+                    assertEquals(
+                            analogInputChangeListener1,
+                            siosLib.getAnalogInputChangeListeners()
+                                    .get(SiosLib.AnalogInput.ANALOG_INPUT_2)
+                                    .get(SiosLib.BitWidth.BIT_WIDTH_10_BITS)
+                                    .get(0));
+                    assertEquals(
+                            analogInputChangeListener2,
+                            siosLib.getAnalogInputChangeListeners()
+                                    .get(SiosLib.AnalogInput.ANALOG_INPUT_2)
+                                    .get(SiosLib.BitWidth.BIT_WIDTH_8_BITS)
+                                    .get(0));
+                    assertEquals(
+                            analogInputChangeListener3,
+                            siosLib.getAnalogInputChangeListeners()
+                                    .get(SiosLib.AnalogInput.ANALOG_INPUT_2)
+                                    .get(SiosLib.BitWidth.BIT_WIDTH_8_BITS)
+                                    .get(1));
+
+                    siosLib.removeDigitalInputChangeListener(digitalChangeListener1);
+                    siosLib.removeAnalogInputChangeListener(
+                            SiosLib.AnalogInput.ANALOG_INPUT_2,
+                            SiosLib.BitWidth.BIT_WIDTH_8_BITS,
+                            analogInputChangeListener2);
+
+                    // has no effect, just increasing coverage:
+                    siosLib.removeAnalogInputChangeListener(
+                            SiosLib.AnalogInput.ANALOG_INPUT_1,
+                            SiosLib.BitWidth.BIT_WIDTH_10_BITS,
+                            analogInputChangeListener1);
+
+                    assertEquals(
+                            1,
+                            siosLib.getAnalogInputChangeListeners()
+                                    .get(SiosLib.AnalogInput.ANALOG_INPUT_2)
+                                    .get(SiosLib.BitWidth.BIT_WIDTH_10_BITS)
+                                    .size());
+                    assertEquals(
+                            analogInputChangeListener1,
+                            siosLib.getAnalogInputChangeListeners()
+                                    .get(SiosLib.AnalogInput.ANALOG_INPUT_2)
+                                    .get(SiosLib.BitWidth.BIT_WIDTH_10_BITS)
+                                    .get(0));
+
+                    assertEquals(
+                            1,
+                            siosLib.getAnalogInputChangeListeners()
+                                    .get(SiosLib.AnalogInput.ANALOG_INPUT_2)
+                                    .get(SiosLib.BitWidth.BIT_WIDTH_8_BITS)
+                                    .size());
+
+                    assertEquals(1, siosLib.getDigitalInputChangeListeners().size());
+                    assertEquals(
+                            digitalChangeListener2,
+                            siosLib.getDigitalInputChangeListeners().get(0));
+
+                    siosLib.removeAnalogInputChangeListener(
+                            SiosLib.AnalogInput.ANALOG_INPUT_2,
+                            SiosLib.BitWidth.BIT_WIDTH_10_BITS,
+                            analogInputChangeListener1);
+                    assertEquals(
+                            1,
+                            siosLib.getAnalogInputChangeListeners()
+                                    .get(SiosLib.AnalogInput.ANALOG_INPUT_2)
+                                    .size());
+                    assertFalse(siosLib.getAnalogInputChangeListeners()
+                            .get(SiosLib.AnalogInput.ANALOG_INPUT_2)
+                            .containsKey(SiosLib.BitWidth.BIT_WIDTH_10_BITS));
+
+                    // has no effect, just increasing coverage:
+                    siosLib.removeAnalogInputChangeListener(
+                            SiosLib.AnalogInput.ANALOG_INPUT_2,
+                            SiosLib.BitWidth.BIT_WIDTH_10_BITS,
+                            analogInputChangeListener1);
+
+                    siosLib.removeAnalogInputChangeListener(
+                            SiosLib.AnalogInput.ANALOG_INPUT_2,
+                            SiosLib.BitWidth.BIT_WIDTH_8_BITS,
+                            analogInputChangeListener2);
+                    assertEquals(
+                            1,
+                            siosLib.getAnalogInputChangeListeners()
+                                    .get(SiosLib.AnalogInput.ANALOG_INPUT_2)
+                                    .get(SiosLib.BitWidth.BIT_WIDTH_8_BITS)
+                                    .size());
+
+                    siosLib.removeAnalogInputChangeListener(
+                            SiosLib.AnalogInput.ANALOG_INPUT_2,
+                            SiosLib.BitWidth.BIT_WIDTH_8_BITS,
+                            analogInputChangeListener3);
+                    assertEquals(0, siosLib.getAnalogInputChangeListeners().size());
+                }
+            }
+        }
+
+        @Test
+        @DisplayName("checks polling after digital change listener change")
+        void checks_polling_after_digital_change_listener_change() throws NoSuchFieldException, IllegalAccessException {
+            BiConsumer<Integer, Integer> digitalChangeListener = (oldValue, newValue) -> {
+                System.out.println(oldValue + " -> " + newValue);
+            };
+            try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
+                prepareSerialPortMock();
+
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
+
+                try (SiosLib siosLib = new SiosLib(SIOS_MODE)) {
+
+                    DevicePoller devicePoller = mock(DevicePoller.class);
+
+                    Field devicePollerField = SiosLib.class.getDeclaredField("devicePoller");
+                    devicePollerField.setAccessible(true);
+                    devicePollerField.set(siosLib, devicePoller);
+
+                    siosLib.addDigitalInputChangeListener(digitalChangeListener);
+                    verify(devicePoller, times(1)).startPolling();
+                    verify(devicePoller, times(0)).stopPolling();
+
+                    siosLib.removeDigitalInputChangeListener(digitalChangeListener);
+                    verify(devicePoller, times(1)).stopPolling();
+                }
+            }
+        }
+
+        @Test
+        @DisplayName("checks polling after analog change listener change")
+        void checks_polling_after_analog_change_listener_change() throws NoSuchFieldException, IllegalAccessException {
+            BiConsumer<Integer, Integer> analogInputChangeListener = (oldValue, newValue) -> {
+                System.out.println("Analog: " + oldValue + " -> " + newValue);
+            };
+            try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
+                prepareSerialPortMock();
+
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
+
+                try (SiosLib siosLib = new SiosLib(SIOS_MODE)) {
+
+                    DevicePoller devicePoller = mock(DevicePoller.class);
+
+                    Field devicePollerField = SiosLib.class.getDeclaredField("devicePoller");
+                    devicePollerField.setAccessible(true);
+                    devicePollerField.set(siosLib, devicePoller);
+
+                    siosLib.addAnalogInputChangeListener(
+                            SiosLib.AnalogInput.ANALOG_INPUT_2,
+                            SiosLib.BitWidth.BIT_WIDTH_10_BITS,
+                            analogInputChangeListener);
+                    verify(devicePoller, times(1)).startPolling();
+                    verify(devicePoller, times(0)).stopPolling();
+
+                    siosLib.removeAnalogInputChangeListener(
+                            SiosLib.AnalogInput.ANALOG_INPUT_2,
+                            SiosLib.BitWidth.BIT_WIDTH_10_BITS,
+                            analogInputChangeListener);
+                    verify(devicePoller, times(1)).stopPolling();
+                }
+            }
+        }
+
+        @Test
+        @DisplayName(
+                "logs a warning when \"manually\" querying the digital input after a respective ChangeListener was added")
+        void logs_a_warning_when_manually_querying_the_digital_input_after_a_respective_ChangeListener_was_added()
+                throws ExecutionException, InterruptedException, IOException {
+            BiConsumer<Integer, Integer> digitalChangeListener = (oldValue, newValue) -> {
+                System.out.println(oldValue + " -> " + newValue);
+            };
+            try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
+                prepareSerialPortMock();
+
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
+
+                try (SiosLib siosLib = new SiosLib(SIOS_MODE)) {
+
+                    siosLib.addDigitalInputChangeListener(digitalChangeListener);
+
+                    Logger logger = (Logger) LogManager.getLogger(SiosLib.class);
+                    Configuration configuration = logger.getContext().getConfiguration();
+                    OutputStream outputStream = new ByteArrayOutputStream();
+                    Appender appender =
+                            OutputStreamAppender.createAppender(null, null, outputStream, "testAppender1", false, true);
+                    configuration.addLoggerAppender(logger, appender);
+                    appender.start();
+
+                    siosLib.getDigitalInputValue();
+
+                    appender.stop();
+                    outputStream.close();
+                    configuration.getRootLogger().removeAppender("testAppender1");
+
+                    assertTrue(
+                            outputStream
+                                    .toString()
+                                    .contains(
+                                            "Calling getDigitalInputValue while having a change listener for digital input changes in-place is not recommended as the change listener will automatically be informed on digital input changes."));
+                }
+            }
+        }
+
+        @Test
+        @DisplayName(
+                "logs a warning when \"manually\" querying the analog input after a respective ChangeListener was added")
+        void logs_a_warning_when_manually_querying_the_analog_input_after_a_respective_ChangeListener_was_added()
+                throws ExecutionException, InterruptedException, IOException {
+            BiConsumer<Integer, Integer> analogChangeListener = (oldValue, newValue) -> {
+                System.out.println(oldValue + " -> " + newValue);
+            };
+            try (MockedStatic<SerialPort> serialPortStaticMock = mockStatic(SerialPort.class)) {
+                prepareSerialPortMock();
+
+                serialPortStaticMock
+                        .when(() -> SerialPort.getCommPort("Serial Port 123"))
+                        .thenReturn(serialPort);
+                serialPortStaticMock.when(SerialPort::getCommPorts).thenReturn(new SerialPort[] {serialPort});
+
+                try (SiosLib siosLib = new SiosLib(SIOS_MODE)) {
+
+                    siosLib.addAnalogInputChangeListener(
+                            SiosLib.AnalogInput.ANALOG_INPUT_1,
+                            SiosLib.BitWidth.BIT_WIDTH_8_BITS,
+                            analogChangeListener);
+
+                    Logger logger = (Logger) LogManager.getLogger(SiosLib.class);
+                    Configuration configuration = logger.getContext().getConfiguration();
+                    OutputStream outputStream = new ByteArrayOutputStream();
+                    Appender appender =
+                            OutputStreamAppender.createAppender(null, null, outputStream, "testAppender2", false, true);
+                    configuration.addLoggerAppender(logger, appender);
+                    appender.start();
+
+                    siosLib.getAnalogValue(SiosLib.AnalogInput.ANALOG_INPUT_1, SiosLib.BitWidth.BIT_WIDTH_8_BITS);
+                    siosLib.getAnalogValue(SiosLib.AnalogInput.ANALOG_INPUT_1, SiosLib.BitWidth.BIT_WIDTH_10_BITS);
+                    siosLib.getAnalogValue(SiosLib.AnalogInput.ANALOG_INPUT_2, SiosLib.BitWidth.BIT_WIDTH_8_BITS);
+
+                    appender.stop();
+                    outputStream.close();
+                    configuration.getRootLogger().removeAppender("testAppender2");
+
+                    // The second and third getAnalogValue call should NOT have produced a warning as no ChangeListener
+                    // was registered for this combination of values.
+                    int occurrences = outputStream
+                                    .toString()
+                                    .split(
+                                            "Calling getAnalogValue for an AnalogInput while having a change listener for this input in-place is not recommended as the change listener will automatically be informed on input changes.",
+                                            -1)
+                                    .length
+                            - 1;
+
+                    assertEquals(1, occurrences);
+                }
+            }
         }
     }
 

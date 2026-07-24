@@ -4,13 +4,18 @@ import com.fazecast.jSerialComm.SerialPort;
 import com.fazecast.jSerialComm.SerialPortDataListener;
 import com.fazecast.jSerialComm.SerialPortEvent;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.BiConsumer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -262,9 +267,30 @@ public class SiosLib implements AutoCloseable {
     private int digitalOutputValue;
 
     /**
+     * The default polling interval
+     */
+    public static final int DEFAULT_POLLING_INTERVAL_MS = 50;
+
+    /**
      * Lock to assure parallel calls won't interfere
      */
     private final ReentrantLock lock = new ReentrantLock();
+
+    /**
+     * The poller used to periodically poll the device input values, if needed.
+     */
+    private DevicePoller devicePoller;
+
+    /**
+     * Change listeners called on digital input changes
+     */
+    List<BiConsumer<Integer, Integer>> digitalInputChangeListeners = new ArrayList<>();
+
+    /**
+     * Change listeners called on digital input changes
+     */
+    Map<AnalogInput, Map<BitWidth, List<BiConsumer<Integer, Integer>>>> analogInputChangeListeners =
+            new EnumMap<>(AnalogInput.class);
 
     /**
      * The 16 possible states (each: on or off) of the 8 digital outputs.
@@ -331,6 +357,9 @@ public class SiosLib implements AutoCloseable {
     /**
      * Initializes the library by scanning all serial ports for the presence of a SIOSLAB / COMPULAB device and setting
      * it to the mode supplied.
+     * <p>
+     * The polling interval is set to the default polling interval (see {@link #DEFAULT_POLLING_INTERVAL_MS}) here. If
+     * you need to adapt it, use the constructor with the @{code pollingIntervalMs} parameter.
      *
      * @param mode The operation mode to use. {@link com.github.ahuemmer.sioslib.SiosLib.SiosLabMode#SIOS_MODE} should
      *             be the best option for most cases, unless you have connected a COMPULAB device instead of a SIOSLAB.
@@ -339,6 +368,23 @@ public class SiosLib implements AutoCloseable {
      *                                    connected to one of them.
      */
     public SiosLib(SiosLabMode mode) throws NoSerialPortFoundException {
+        this(mode, DEFAULT_POLLING_INTERVAL_MS);
+    }
+
+    /**
+     * Initializes the library by scanning all serial ports for the presence of a SIOSLAB / COMPULAB device and setting
+     * it to the mode supplied.
+     *
+     * @param mode              The operation mode to use. {@link com.github.ahuemmer.sioslib.SiosLib.SiosLabMode#SIOS_MODE} should
+     *                          be the best option for most cases, unless you have connected a COMPULAB device instead of a SIOSLAB.
+     * @param pollingIntervalMs The interval used between subsequent polling requests to the device, if ChangeListeners
+     *                          are present. (See {@link #addDigitalInputChangeListener(java.util.function.BiConsumer)}
+     *                          and {@link #addAnalogInputChangeListener(com.github.ahuemmer.sioslib.SiosLib.AnalogInput, com.github.ahuemmer.sioslib.SiosLib.BitWidth, java.util.function.BiConsumer)}).
+     * @throws NoSerialPortFoundException if no serial port was found at all.
+     * @throws NoSiosLabFoundException    if serial ports were found, but there does not seem to be a SIOLAB or COMPULAB
+     *                                    connected to one of them.
+     */
+    public SiosLib(SiosLabMode mode, int pollingIntervalMs) throws NoSerialPortFoundException {
 
         SerialPort[] ports = SerialPort.getCommPorts();
 
@@ -375,6 +421,9 @@ public class SiosLib implements AutoCloseable {
         if (modeDetected != mode) {
             switchMode(mode);
         }
+
+        this.devicePoller = new DevicePoller(this, pollingIntervalMs);
+        this.checkPolling();
     }
 
     /**
@@ -528,6 +577,27 @@ public class SiosLib implements AutoCloseable {
      * @throws InterruptedException if waiting for the data was interrupted.
      */
     public int getDigitalInputValue() throws ExecutionException, InterruptedException {
+        return getDigitalInputValue(true);
+    }
+
+    /**
+     * Gets the combined value of all digital inputs. As there are eight of those, each having {@code 0} or {@code 1},
+     * the resulting value will be between {@code 0} and {@code 255}.
+     * The highest (eighth) digital port will carry the most significant bit ({@code 127} or {@code 0}).
+     *
+     * @param external Boolean to distinguish between internal requests (from
+     *                 {@link com.github.ahuemmer.sioslib.DevicePoller}) and requests from the library consumer.
+     * @return The digital inputs' value.
+     * @throws ExecutionException   if an exception occurred while waiting for the data.
+     * @throws InterruptedException if waiting for the data was interrupted.
+     */
+    int getDigitalInputValue(boolean external) throws ExecutionException, InterruptedException {
+
+        if (external && !this.digitalInputChangeListeners.isEmpty()) {
+            LOG.warn(
+                    "Calling getDigitalInputValue while having a change listener for digital input changes in-place is not recommended as the change listener will automatically be informed on digital input changes.");
+        }
+
         lock.lock();
         byte[] result = sendDataAndWaitForAnswer(
                 siosLabMode == SiosLabMode.SIOS_MODE
@@ -764,6 +834,34 @@ public class SiosLib implements AutoCloseable {
      */
     public int getAnalogValue(AnalogInput analogInput, BitWidth bitWidth)
             throws ExecutionException, InterruptedException {
+        return getAnalogValue(analogInput, bitWidth, true);
+    }
+
+    /**
+     * Gets the current value of an analog input, reflecting the voltage applied to it.
+     *
+     * @param analogInput The input to query.
+     * @param bitWidth    The desired bit width of the result. If you choose
+     *                    {@link com.github.ahuemmer.sioslib.SiosLib.BitWidth#BIT_WIDTH_10_BITS}, the values are more
+     *                    fine-grained between {@code 0} and {@code 1023}. Otherwise, they will be between {@code 0} and
+     *                    {@code 255}.
+     *                    Note: {@link com.github.ahuemmer.sioslib.SiosLib.BitWidth#BIT_WIDTH_10_BITS} is only possible
+     *                    in {@link com.github.ahuemmer.sioslib.SiosLib.SiosLabMode#SIOS_MODE}.
+     * @param external    Boolean to distinguish between internal requests (from
+     *                    {@link com.github.ahuemmer.sioslib.DevicePoller}) and requests from the library consumer.
+     * @return The value read from the analog input.
+     * @throws ExecutionException   if an exception occurred while waiting for the data.
+     * @throws InterruptedException if waiting for the data was interrupted.
+     */
+    int getAnalogValue(AnalogInput analogInput, BitWidth bitWidth, boolean external)
+            throws ExecutionException, InterruptedException {
+
+        if (external
+                && this.analogInputChangeListeners.get(analogInput) != null
+                && this.analogInputChangeListeners.get(analogInput).get(bitWidth) != null) {
+            LOG.warn(
+                    "Calling getAnalogValue for an AnalogInput while having a change listener for this input in-place is not recommended as the change listener will automatically be informed on input changes.");
+        }
 
         LOG.trace("Getting analog value from {}", analogInput);
 
@@ -895,6 +993,11 @@ public class SiosLib implements AutoCloseable {
         setDigitalOutputValue(newDigitalOutputValue);
     }
 
+    /**
+     * Returns the name of the serial port the SIOSLab / CompuLab was found on.
+     *
+     * @return The name of the serial port the SIOSLab / CompuLab was found on.
+     */
     public String getSerialPortName() {
         return siosLabPort.getDescriptivePortName();
     }
@@ -904,19 +1007,126 @@ public class SiosLib implements AutoCloseable {
      */
     @Override
     public void close() {
+        devicePoller.shutdown();
         LOG.info("Closing SiosLab port {}", siosLabPort.getSystemPortName());
         sendData(
                 siosLabMode == SiosLabMode.SIOS_MODE
                         ? CONTROL_SET_DIGITAL_OUTPUT_SIOS_MODE
                         : CONTROL_SET_DIGITAL_OUTPUT_COMPULAB_MODE);
         sendData((byte) 0);
-        try {
-            Thread.sleep(SHUTDOWN_WAITING_INTERVAL);
-        } catch (InterruptedException e) {
-            LOG.warn("Interrupted when shutting down!", e);
-            Thread.currentThread().interrupt();
-        }
         siosLabPort.closePort();
+    }
+
+    /**
+     * Adds a listener function to be called automatically when a change of the digital input value was detected.
+     * The digital input is polled regularly to monitor the value. (See {@code pollingIntervalMs} parameter of the
+     * {@link com.github.ahuemmer.sioslib.SiosLib} constructor.)
+     * <p>
+     * The ChangeListener will receive two integers, the first one being the former digital input value, the second
+     * one being the new value.
+     * <p>
+     * Once there are one or more digital input ChangeListener, SiosLib will automatically start querying the digital
+     * value periodically.
+     *
+     * @param digitalInputChangeListener a function accepting two integers, the former and the new digital input value.
+     */
+    public void addDigitalInputChangeListener(BiConsumer<Integer, Integer> digitalInputChangeListener) {
+        this.digitalInputChangeListeners.add(digitalInputChangeListener);
+        this.checkPolling();
+    }
+
+    /**
+     * Removes a ChangeListener for digital input changes.
+     * <p>
+     * If the given ChangeListener was not added before via {@link #addDigitalInputChangeListener(java.util.function.BiConsumer)},
+     * nothing will happen.
+     *
+     * @param digitalInputChangeListener The ChangeListener to remove.
+     */
+    public void removeDigitalInputChangeListener(BiConsumer<Integer, Integer> digitalInputChangeListener) {
+        this.digitalInputChangeListeners.remove(digitalInputChangeListener);
+        this.checkPolling();
+    }
+
+    /**
+     * Adds a listener function to be called automatically when a change of an analog input value was detected.
+     * The corresponding analog input is polled regularly to monitor the value. (See {@code pollingIntervalMs} parameter
+     * of the {@link com.github.ahuemmer.sioslib.SiosLib} constructor.)
+     * <p>
+     * The ChangeListener will receive two integers, the first one being the former analog input value, the second
+     * one being the new value.
+     * <p>
+     * Once there are one or more analog input change listeners for the given combination of {@link com.github.ahuemmer.sioslib.SiosLib.AnalogInput}
+     * and {@link com.github.ahuemmer.sioslib.SiosLib.BitWidth}, SiosLib will automatically start querying the
+     * respective values periodically.
+     *
+     * @param analogInput               the AnalogInput to query.
+     * @param bitWidth                  the BitWidth to use when querying the input.
+     * @param analogInputChangeListener a function accepting two integers, the former and the new digital input value.
+     */
+    public void addAnalogInputChangeListener(
+            AnalogInput analogInput, BitWidth bitWidth, BiConsumer<Integer, Integer> analogInputChangeListener) {
+        this.analogInputChangeListeners.computeIfAbsent(analogInput, k -> new EnumMap<>(BitWidth.class));
+        this.analogInputChangeListeners.get(analogInput).computeIfAbsent(bitWidth, k -> new ArrayList<>());
+        this.analogInputChangeListeners.get(analogInput).get(bitWidth).add(analogInputChangeListener);
+        this.checkPolling();
+    }
+
+    /**
+     * Removes a ChangeListener for analog input changes.
+     * <p>
+     * If the given ChangeListener was not added before via {@link #addAnalogInputChangeListener(com.github.ahuemmer.sioslib.SiosLib.AnalogInput, com.github.ahuemmer.sioslib.SiosLib.BitWidth, java.util.function.BiConsumer)},
+     * nothing will happen.
+     *
+     * @param analogInput               the AnalogInput remove the listener from.
+     * @param bitWidth                  the BitWidth to remove the listener from.
+     * @param analogInputChangeListener the ChangeListener to remove.
+     */
+    public void removeAnalogInputChangeListener(
+            AnalogInput analogInput, BitWidth bitWidth, BiConsumer<Integer, Integer> analogInputChangeListener) {
+        if (this.analogInputChangeListeners.containsKey(analogInput)
+                && this.analogInputChangeListeners.get(analogInput).containsKey(bitWidth)) {
+            this.analogInputChangeListeners.get(analogInput).get(bitWidth).remove(analogInputChangeListener);
+            if (this.analogInputChangeListeners.get(analogInput).get(bitWidth).isEmpty()) {
+                this.analogInputChangeListeners.get(analogInput).remove(bitWidth);
+                if (this.analogInputChangeListeners.get(analogInput).isEmpty()) {
+                    this.analogInputChangeListeners.remove(analogInput);
+                }
+            }
+            this.checkPolling();
+        }
+    }
+
+    /**
+     * Returns the change listeners currently used by the SiosLib (added via {@link #addDigitalInputChangeListener(java.util.function.BiConsumer)}
+     * and not removed via {@link #removeDigitalInputChangeListener(java.util.function.BiConsumer)}).
+     *
+     * @return the change listeners currently used by the SiosLib, added via {@link #addDigitalInputChangeListener(java.util.function.BiConsumer)}
+     */
+    public List<BiConsumer<Integer, Integer>> getDigitalInputChangeListeners() {
+        return digitalInputChangeListeners;
+    }
+
+    /**
+     * Returns the change listeners currently used by the SiosLib (added via {@link #addAnalogInputChangeListener(com.github.ahuemmer.sioslib.SiosLib.AnalogInput, com.github.ahuemmer.sioslib.SiosLib.BitWidth, java.util.function.BiConsumer)}
+     * and not removed via {@link #removeAnalogInputChangeListener(com.github.ahuemmer.sioslib.SiosLib.AnalogInput, com.github.ahuemmer.sioslib.SiosLib.BitWidth, java.util.function.BiConsumer)}).
+     *
+     * @return the change listeners currently used by the SiosLib, added via {@link #addAnalogInputChangeListener(com.github.ahuemmer.sioslib.SiosLib.AnalogInput, com.github.ahuemmer.sioslib.SiosLib.BitWidth, java.util.function.BiConsumer)}
+     */
+    public Map<AnalogInput, Map<BitWidth, List<BiConsumer<Integer, Integer>>>> getAnalogInputChangeListeners() {
+        return analogInputChangeListeners;
+    }
+
+    /**
+     * Determines whether polling is necessary (at least one ChangeListener is present) and start it accordingly.
+     * Stops polling, if no (more) ChangeListener is present.
+     */
+    private void checkPolling() {
+        if (!digitalInputChangeListeners.isEmpty() || !analogInputChangeListeners.isEmpty()) {
+            this.devicePoller.startPolling();
+            return;
+        }
+        this.devicePoller.stopPolling();
     }
 
     /**
