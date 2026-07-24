@@ -8,8 +8,10 @@ This project gives you a Java library to easily access a
 <!-- toc -->- __[Features](#features)__
 - __[Usage](#usage)__
    - __[Digital input](#digital-input)__
+      - __[Polling](#polling)__
    - __[Digital output](#digital-output)__
    - __[Analog input](#analog-input)__
+      - __[Polling](#polling-1)__
    - __[Analog output](#analog-output)__
 - __[docs folder](#docs-folder)__
 - __[Third-Party software](#third-party-software)__
@@ -54,6 +56,16 @@ Using `getDigitalInputValue` retrieves the combined value of the eight digital i
 number 7) will count as `127` and the lowest bit (input number 0) as `1`. Thus, the value can range from `0` (no input
 on any input port) to `255` (input present on all ports).
 
+#### Polling
+
+As an alternative to using `getDigitalInputValue` directly, you may add one or more ChangeListener(s) via
+`addDigitalInputChangeListener`. This ChangeListener will be called automatically as soon as the digital input value
+changes.
+
+The polling interval can be adjusted using the `pollingInterval` parameter of the constructor. Empiric tests showed a
+"round-trip" time of ~33ms for a single `getDigitalInputValue` call. For reasons of safety, a polling interval lower 
+than 50ms is not recommended though.
+
 ### Digital output
 
 Call `setDigitalOutputValue` with a value between `0` and `255` to set the digital outputs respectively. The logic is
@@ -73,6 +85,16 @@ To retrieve the digital last output value set, use `getDigitalOutputValue`.
 Reading the value of an analog input can be done via `getAnalogValue`. As with `setAnalogOutputValue`, there's a rather
 coarse relation between the voltage applied to the input and the value retrieved. In 10 bit mode (applicable to a
 SIOSLAB device only, not to a CompuLab), the values may range from `0` to `1024`, in 8 bit mode from `0` to `255`.
+
+#### Polling
+
+As an alternative to using `getAnalogValue` directly, you may add one or more ChangeListener(s) via
+`addAnalogInputChangeListener`. This ChangeListener will be called automatically as soon as the corresponding analog
+input value changes.
+
+The polling interval can be adjusted using the `pollingInterval` parameter of the constructor. Empiric tests showed a
+"round-trip" time of ~33ms for a single `getAnalogValue` call. For reasons of safety, a polling interval lower than 50ms
+is not recommended though.
 
 ### Analog output
 

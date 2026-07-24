@@ -4,6 +4,7 @@ import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -60,6 +61,34 @@ class SiosLibIntegrationTest {
     }
 
     /**
+     * Data is read from the digital input and mirrored on the digital output. A ChangeListener is used here, so
+     * no polling is necessary.
+     * <p>
+     * E.g. if digital input 2 is connected to the +5V source, the digital output nr. 2 will be set to "ON", also
+     * make the LED nr. 2 light.
+     *
+     * @throws Exception if the SIOSLab cannot be found or any other error occurs.
+     */
+    @Test
+    void mirrorDataUsingChangeListener() throws Exception {
+        try (SiosLib siosLib = new SiosLib(TEST_MODE)) {
+            assertTrue(siosLib.isConnected());
+
+            long startTime = System.currentTimeMillis();
+
+            BiConsumer<Integer, Integer> changeListener = (oldValue, newValue) -> {
+                siosLib.setDigitalOutputValue(newValue);
+            };
+
+            siosLib.addDigitalInputChangeListener(changeListener);
+
+            while (System.currentTimeMillis() - startTime < 60000) {
+                // Just wait...
+            }
+        }
+    }
+
+    /**
      * Data is read from the analog input sets the digital output accordingly.
      * <p>
      * The higher the voltage (0..5V) on the analog input, the more LEDs on the digital output ports will be lit up.
@@ -97,6 +126,48 @@ class SiosLibIntegrationTest {
 
                 siosLib.setDigitalOutputValue(valueOut);
                 await().pollDelay(250, TimeUnit.MILLISECONDS).untilAsserted(() -> assertTrue(true));
+            }
+        }
+    }
+
+    /**
+     * Data is read from the analog input sets the digital output accordingly. A ChangeListener is used here, so
+     * no polling is necessary.
+     * <p>
+     * The higher the voltage (0..5V) on the analog input, the more LEDs on the digital output ports will be lit up.
+     * <p>
+     * For example, you can attach a trimmer potentiometer's "left" and "right" connectors to the ground and 5V outlets
+     * of the device and the central connector to the analog input. Then, turning the trimmer potentiometers adjustment
+     * wheel will cause more or less of the output leds to be lit, reflecting the voltage distribution.
+     *
+     * @throws Exception if the SIOSLab cannot be found or any other error occurs.
+     */
+    @Test
+    void reflectVoltageUsingChangeListener() throws Exception {
+        try (SiosLib siosLib = new SiosLib(TEST_MODE)) {
+            assertTrue(siosLib.isConnected());
+
+            long startTime = System.currentTimeMillis();
+
+            int maxValuePlusOne = TEST_MODE == SiosLib.SiosLabMode.SIOS_MODE ? 1024 : 256;
+
+            BiConsumer<Integer, Integer> changeListener = (oldValue, newValue) -> {
+                int valueOut = 0;
+                int factor = 1;
+                for (int i = 0; i <= 7; i++) {
+                    if (newValue > (maxValuePlusOne * i * 0.125)) {
+                        valueOut += factor;
+                    }
+                    factor *= 2;
+                }
+
+                siosLib.setDigitalOutputValue(valueOut);
+            };
+
+            siosLib.addAnalogInputChangeListener(ANALOG_INPUT_TO_USE, ANALOG_OUTPUT_BITWIDTH_TO_USE, changeListener);
+
+            while (System.currentTimeMillis() - startTime < 60000) {
+                // Just wait...
             }
         }
     }
